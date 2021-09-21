@@ -5,6 +5,8 @@ By running this script you'll be able to generate Anki cards with all the leetco
 
 I personally use it to track my grinding progress.
 
+![ezgif-7-03b29041a91e](https://user-images.githubusercontent.com/1616237/134259809-57af6afb-8885-4899-adf8-a2639977baeb.gif)
+
 ## Installation
 First initialize and activate python virtualenv somewhere
 ```
@@ -24,3 +26,5 @@ make generate
 ```
 
 You'll get `leetcode.apkg` file, which you can import directly to your anki app.
+
+There also will be the `cache` directory created for the cached data about the problems. In you want to fetch more up to date version about the existing problems, delete this dir. Just keep in mind, it'll take a while to re-download the data about all the problems.

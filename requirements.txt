@@ -1,0 +1,4 @@
+git+https://github.com/prius/python-leetcode.git
+diskcache
+genanki
+tqdm

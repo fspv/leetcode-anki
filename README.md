@@ -31,5 +31,7 @@ There also will be the `cache` directory created for the cached data about the p
 
 ## Known issues
 The script doesn't exit on finish.
+
 This is the result of a swagger bug, that has never been addressed https://github.com/swagger-api/swagger-codegen/issues/9991
+
 As a workaround I generarate a new anki board after each question added. So when progressbar is full, just kill the app. Generation of `leetcode.apkg` file will be complete by this point. This is not effective, so should be fixed later.

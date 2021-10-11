@@ -118,8 +118,7 @@ class LeetcodeData:
             variables=leetcode.GraphqlQueryVariables(title_slug=problem_slug),
             operation_name="getQuestionDetail",
         )
-
-        data = api_instance.graphql_post(body=graphql_request).data["question"]
+        data = api_instance.graphql_post(body=graphql_request).data.question
 
         # Save data in the cache
         self._cache[problem_slug] = data
@@ -128,11 +127,11 @@ class LeetcodeData:
 
     def _get_description(self, problem_slug: str) -> str:
         data = self._get_problem_data(problem_slug)
-        return data["content"]
+        return data.content or "No content"
 
     def _stats(self, problem_slug: str) -> Dict[str, str]:
         data = self._get_problem_data(problem_slug)
-        return json.loads(data["stats"])
+        return json.loads(data.stats)
 
     def submissions_total(self, problem_slug: str) -> int:
         return self._stats(problem_slug)["totalSubmissionRaw"]
@@ -148,7 +147,7 @@ class LeetcodeData:
 
     def difficulty(self, problem_slug: str) -> str:
         data = self._get_problem_data(problem_slug)
-        diff = data["difficulty"]
+        diff = data.difficulty
 
         if diff == "Easy":
             return "<font color='green'>Easy</font>"
@@ -161,15 +160,15 @@ class LeetcodeData:
 
     def paid(self, problem_slug: str) -> str:
         data = self._get_problem_data(problem_slug)
-        return data["isPaidOnly"]
+        return data.is_paid_only
 
     def problem_id(self, problem_slug: str) -> str:
         data = self._get_problem_data(problem_slug)
-        return data["questionFrontendId"]
+        return data.question_frontend_id
 
     def likes(self, problem_slug: str) -> int:
         data = self._get_problem_data(problem_slug)
-        likes = data["likes"]
+        likes = data.likes
 
         if not isinstance(likes, int):
             raise ValueError(f"Likes should be int: {likes}")
@@ -178,7 +177,7 @@ class LeetcodeData:
 
     def dislikes(self, problem_slug: str) -> int:
         data = self._get_problem_data(problem_slug)
-        dislikes = data["dislikes"]
+        dislikes = data.dislikes
 
         if not isinstance(dislikes, int):
             raise ValueError(f"Dislikes should be int: {dislikes}")
@@ -187,7 +186,7 @@ class LeetcodeData:
 
     def tags(self, problem_slug: str) -> List[str]:
         data = self._get_problem_data(problem_slug)
-        return list(map(lambda x: x["slug"], data["topicTags"]))
+        return list(map(lambda x: x.slug, data.topic_tags))
 
 
 class LeetcodeNote(genanki.Note):

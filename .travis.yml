@@ -1,0 +1,13 @@
+language: python
+python:
+  - '3.9'
+install: pip install -r requirements.txt
+script:
+  - python generate.py
+deploy:
+  provider: releases
+  api_key: $GITHUB_TOKEN
+  file: leetcode.apkg
+  skip_cleanup: true
+  on:
+    branch: master

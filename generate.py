@@ -237,6 +237,39 @@ def get_leetcode_task_handles() -> Iterator[Tuple[str, str, str]]:
             yield (topic, stat.question__title, stat.question__title_slug)
 
 
+def generate_anki_note(
+    leetcode_data: LeetcodeData,
+    leetcode_model: genanki.Model,
+    leetcode_task_handle: str,
+    leetcode_task_title: str,
+    topic: str,
+) -> LeetcodeNote:
+    return LeetcodeNote(
+        model=leetcode_model,
+        fields=[
+            leetcode_task_handle,
+            str(leetcode_data.problem_id(leetcode_task_handle)),
+            leetcode_task_title,
+            topic,
+            leetcode_data.description(leetcode_task_handle),
+            leetcode_data.difficulty(leetcode_task_handle),
+            "yes" if leetcode_data.paid(leetcode_task_handle) else "no",
+            str(leetcode_data.likes(leetcode_task_handle)),
+            str(leetcode_data.dislikes(leetcode_task_handle)),
+            str(leetcode_data.submissions_total(leetcode_task_handle)),
+            str(leetcode_data.submissions_accepted(leetcode_task_handle)),
+            str(
+                int(
+                    leetcode_data.submissions_accepted(leetcode_task_handle)
+                    / leetcode_data.submissions_total(leetcode_task_handle)
+                    * 100
+                )
+            ),
+        ],
+        tags=leetcode_data.tags(leetcode_task_handle),
+    )
+
+
 def generate(start: int, stop: int) -> None:
     leetcode_model = genanki.Model(
         LEETCODE_ANKI_MODEL_ID,
@@ -298,30 +331,12 @@ def generate(start: int, stop: int) -> None:
     for topic, leetcode_task_title, leetcode_task_handle in tqdm(
         list(get_leetcode_task_handles())[start:stop]
     ):
-
-        leetcode_note = LeetcodeNote(
-            model=leetcode_model,
-            fields=[
-                leetcode_task_handle,
-                str(leetcode_data.problem_id(leetcode_task_handle)),
-                leetcode_task_title,
-                topic,
-                leetcode_data.description(leetcode_task_handle),
-                leetcode_data.difficulty(leetcode_task_handle),
-                "yes" if leetcode_data.paid(leetcode_task_handle) else "no",
-                str(leetcode_data.likes(leetcode_task_handle)),
-                str(leetcode_data.dislikes(leetcode_task_handle)),
-                str(leetcode_data.submissions_total(leetcode_task_handle)),
-                str(leetcode_data.submissions_accepted(leetcode_task_handle)),
-                str(
-                    int(
-                        leetcode_data.submissions_accepted(leetcode_task_handle)
-                        / leetcode_data.submissions_total(leetcode_task_handle)
-                        * 100
-                    )
-                ),
-            ],
-            tags=leetcode_data.tags(leetcode_task_handle),
+        leetcode_note = generate_anki_note(
+            leetcode_data,
+            leetcode_model,
+            leetcode_task_handle,
+            leetcode_task_title,
+            topic,
         )
         leetcode_deck.add_note(leetcode_note)
 

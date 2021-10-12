@@ -3,7 +3,24 @@ python:
   - '3.9'
 install: pip install -r requirements.txt
 script:
-  - python generate.py
+jobs:
+  include:
+    # Each step caches fetched problems from the previous one
+    # so the next one runs faster.
+    # This is a hack because travis CI has a time limit of 30
+    # minutes for each individual job
+    - stage: 0 to 500
+      script: python generate.py --start 0 --stop 500
+    - stage: 500 to 1000
+      script: python generate.py --start 0 --stop 1000
+    - stage: 1000 to 1500
+      script: python generate.py --start 0 --stop 1500
+    - stage: 1500 to 2000
+      script: python generate.py --start 0 --stop 2000
+    - stage: 2000 to 2500
+      script: python generate.py --start 0 --stop 2500
+    - stage: 2500 to 3000
+      script: python generate.py --start 0 --stop 3000
 deploy:
   provider: releases
   api_key: $GITHUB_TOKEN

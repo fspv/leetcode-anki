@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import argparse
 import json
 import logging
 import os
@@ -28,8 +29,23 @@ ALLOWED_EXTENSIONS = {".py", ".go"}
 logging.getLogger().setLevel(logging.INFO)
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Generate Anki cards for leetcode")
+    parser.add_argument(
+        "--start", type=int, help="Start generation from this problem", default=0
+    )
+    parser.add_argument(
+        "--stop", type=int, help="Stop generation on this problem", default=2 ** 64
+    )
+
+    args = parser.parse_args()
+
+    return args
+
+
 class LeetcodeData:
     def __init__(self) -> None:
+
         # Initialize leetcode API client
         cookies = {
             "csrftoken": os.environ["LEETCODE_CSRF_TOKEN"],
@@ -221,7 +237,7 @@ def get_leetcode_task_handles() -> Iterator[Tuple[str, str, str]]:
             yield (topic, stat.question__title, stat.question__title_slug)
 
 
-def generate() -> None:
+def generate(start: int, stop: int) -> None:
     leetcode_model = genanki.Model(
         LEETCODE_ANKI_MODEL_ID,
         "Leetcode model",
@@ -280,7 +296,7 @@ def generate() -> None:
     leetcode_deck = genanki.Deck(LEETCODE_ANKI_DECK_ID, "leetcode")
     leetcode_data = LeetcodeData()
     for topic, leetcode_task_title, leetcode_task_handle in tqdm(
-        list(get_leetcode_task_handles())
+        list(get_leetcode_task_handles())[start:stop]
     ):
 
         leetcode_note = LeetcodeNote(
@@ -309,9 +325,15 @@ def generate() -> None:
         )
         leetcode_deck.add_note(leetcode_note)
 
-        # Write each time due to swagger bug causing the app hang indefinitely
-        genanki.Package(leetcode_deck).write_to_file(OUTPUT_FILE)
+    genanki.Package(leetcode_deck).write_to_file(OUTPUT_FILE)
+
+
+def main() -> None:
+    args = parse_args()
+
+    start, stop = args.start, args.stop
+    generate(start, stop)
 
 
 if __name__ == "__main__":
-    generate()
+    main()

@@ -27,4 +27,4 @@ deploy:
   file: leetcode.apkg
   skip_cleanup: true
   on:
-    branch: master
+    branch: dev

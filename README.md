@@ -19,7 +19,7 @@ virtualenv -p python3 leetcode-anki
 . leetcode-anki/bin/activate
 ```
 
-Then initialize necessary environment variables. You can get the values directly from your browser
+Then initialize necessary environment variables. You can get the values directly from your browser (if you're using chrome, cookies can be found here chrome://settings/cookies/detail?site=leetcode.com)
 ```
 export LEETCODE_CSRF_TOKEN="xxx"
 export LEETCODE_SESSION_ID="yyy"

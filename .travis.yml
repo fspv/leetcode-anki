@@ -45,10 +45,12 @@ jobs:
         - aws s3 sync s3://github-prius-travis-ci-us-east-1/leetcode-anki-$TRAVIS_BUILD_NUMBER cache
         - python generate.py --start 0 --stop 3000
         - aws s3 rm --recursive s3://github-prius-travis-ci-us-east-1/leetcode-anki-$TRAVIS_BUILD_NUMBER
-deploy:
-  provider: releases
-  api_key: $GITHUB_TOKEN
-  file: leetcode.apkg
-  skip_cleanup: true
-  on:
-    branch: dev
+      deploy:
+        provider: releases
+        api_key: $GITHUB_TOKEN
+        file: leetcode.apkg
+        skip_cleanup: true
+        on:
+          branch: dev
+after_failure:
+  - aws s3 rm --recursive s3://github-prius-travis-ci-us-east-1/leetcode-anki-$TRAVIS_BUILD_NUMBER

@@ -1,0 +1,56 @@
+language: python
+python:
+  - '3.9'
+install:
+  - pip install -r requirements.txt
+  - pip install awscli
+script:
+jobs:
+  include:
+    # Each step caches fetched problems from the previous one
+    # so the next one runs faster.
+    # This is a hack because travis CI has a time limit of 30
+    # minutes for each individual job
+    - stage: 0 to 2 (test run)
+      script:
+        - python generate.py --start 0 --stop 2
+        - aws s3 sync cache s3://github-prius-travis-ci-us-east-1/leetcode-anki-$TRAVIS_BUILD_NUMBER
+    - stage: 2 to 500
+      script:
+        - aws s3 sync s3://github-prius-travis-ci-us-east-1/leetcode-anki-$TRAVIS_BUILD_NUMBER cache
+        - python generate.py --start 0 --stop 500
+        - aws s3 sync cache s3://github-prius-travis-ci-us-east-1/leetcode-anki-$TRAVIS_BUILD_NUMBER
+    - stage: 500 to 1000
+      script:
+        - aws s3 sync s3://github-prius-travis-ci-us-east-1/leetcode-anki-$TRAVIS_BUILD_NUMBER cache
+        - python generate.py --start 0 --stop 1000
+        - aws s3 sync cache s3://github-prius-travis-ci-us-east-1/leetcode-anki-$TRAVIS_BUILD_NUMBER
+    - stage: 1000 to 1500
+      script:
+        - aws s3 sync s3://github-prius-travis-ci-us-east-1/leetcode-anki-$TRAVIS_BUILD_NUMBER cache
+        - python generate.py --start 0 --stop 1500
+        - aws s3 sync cache s3://github-prius-travis-ci-us-east-1/leetcode-anki-$TRAVIS_BUILD_NUMBER
+    - stage: 1500 to 2000
+      script:
+        - aws s3 sync s3://github-prius-travis-ci-us-east-1/leetcode-anki-$TRAVIS_BUILD_NUMBER cache
+        - python generate.py --start 0 --stop 2000
+        - aws s3 sync cache s3://github-prius-travis-ci-us-east-1/leetcode-anki-$TRAVIS_BUILD_NUMBER
+    - stage: 2000 to 2500
+      script:
+        - aws s3 sync s3://github-prius-travis-ci-us-east-1/leetcode-anki-$TRAVIS_BUILD_NUMBER cache
+        - python generate.py --start 0 --stop 2500
+        - aws s3 sync cache s3://github-prius-travis-ci-us-east-1/leetcode-anki-$TRAVIS_BUILD_NUMBER
+    - stage: 2500 to 3000
+      script:
+        - aws s3 sync s3://github-prius-travis-ci-us-east-1/leetcode-anki-$TRAVIS_BUILD_NUMBER cache
+        - python generate.py --start 0 --stop 3000
+        - aws s3 rm --recursive s3://github-prius-travis-ci-us-east-1/leetcode-anki-$TRAVIS_BUILD_NUMBER
+      deploy:
+        provider: releases
+        api_key: $GITHUB_TOKEN
+        file: leetcode.apkg
+        skip_cleanup: true
+        on:
+          branch: master
+after_failure:
+  - aws s3 rm --recursive s3://github-prius-travis-ci-us-east-1/leetcode-anki-$TRAVIS_BUILD_NUMBER

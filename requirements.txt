@@ -1,4 +1,4 @@
-git+https://github.com/prius/python-leetcode.git
+python-leetcode
 diskcache
 genanki
 tqdm

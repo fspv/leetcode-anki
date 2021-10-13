@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
+
+import argparse
+import asyncio
 import json
 import logging
 import os
 import time
 from functools import lru_cache
-from typing import Dict, Iterator, List, Tuple
+from typing import Any, Coroutine, Dict, Iterator, List, Tuple
 
 import diskcache
 # https://github.com/kerrickstaley/genanki
@@ -24,12 +27,29 @@ OUTPUT_FILE = "leetcode.apkg"
 CACHE_DIR = "cache"
 ALLOWED_EXTENSIONS = {".py", ".go"}
 
+leetcode_api_access_lock = asyncio.Lock()
+
 
 logging.getLogger().setLevel(logging.INFO)
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Generate Anki cards for leetcode")
+    parser.add_argument(
+        "--start", type=int, help="Start generation from this problem", default=0
+    )
+    parser.add_argument(
+        "--stop", type=int, help="Stop generation on this problem", default=2 ** 64
+    )
+
+    args = parser.parse_args()
+
+    return args
+
+
 class LeetcodeData:
     def __init__(self) -> None:
+
         # Initialize leetcode API client
         cookies = {
             "csrftoken": os.environ["LEETCODE_CSRF_TOKEN"],
@@ -50,11 +70,9 @@ class LeetcodeData:
             os.mkdir(CACHE_DIR)
         self._cache = diskcache.Cache(CACHE_DIR)
 
-    def _get_problem_data(self, problem_slug: str) -> Dict[str, str]:
+    async def _get_problem_data(self, problem_slug: str) -> Dict[str, str]:
         if problem_slug in self._cache:
             return self._cache[problem_slug]
-
-        time.sleep(2)  # Leetcode has a rate limiter
 
         api_instance = self._api_instance
 
@@ -118,35 +136,40 @@ class LeetcodeData:
             variables=leetcode.GraphqlQueryVariables(title_slug=problem_slug),
             operation_name="getQuestionDetail",
         )
-        data = api_instance.graphql_post(body=graphql_request).data.question
+
+        # Critical section. Don't allow more than one parallel request to
+        # the Leetcode API
+        async with leetcode_api_access_lock:
+            time.sleep(2)  # Leetcode has a rate limiter
+            data = api_instance.graphql_post(body=graphql_request).data.question
 
         # Save data in the cache
         self._cache[problem_slug] = data
 
         return data
 
-    def _get_description(self, problem_slug: str) -> str:
-        data = self._get_problem_data(problem_slug)
+    async def _get_description(self, problem_slug: str) -> str:
+        data = await self._get_problem_data(problem_slug)
         return data.content or "No content"
 
-    def _stats(self, problem_slug: str) -> Dict[str, str]:
-        data = self._get_problem_data(problem_slug)
+    async def _stats(self, problem_slug: str) -> Dict[str, str]:
+        data = await self._get_problem_data(problem_slug)
         return json.loads(data.stats)
 
-    def submissions_total(self, problem_slug: str) -> int:
-        return self._stats(problem_slug)["totalSubmissionRaw"]
+    async def submissions_total(self, problem_slug: str) -> int:
+        return (await self._stats(problem_slug))["totalSubmissionRaw"]
 
-    def submissions_accepted(self, problem_slug: str) -> int:
-        return self._stats(problem_slug)["totalAcceptedRaw"]
+    async def submissions_accepted(self, problem_slug: str) -> int:
+        return (await self._stats(problem_slug))["totalAcceptedRaw"]
 
-    def description(self, problem_slug: str) -> str:
-        return self._get_description(problem_slug)
+    async def description(self, problem_slug: str) -> str:
+        return await self._get_description(problem_slug)
 
-    def solution(self, problem_slug: str) -> str:
+    async def solution(self, problem_slug: str) -> str:
         return ""
 
-    def difficulty(self, problem_slug: str) -> str:
-        data = self._get_problem_data(problem_slug)
+    async def difficulty(self, problem_slug: str) -> str:
+        data = await self._get_problem_data(problem_slug)
         diff = data.difficulty
 
         if diff == "Easy":
@@ -158,16 +181,16 @@ class LeetcodeData:
         else:
             raise ValueError(f"Incorrect difficulty: {diff}")
 
-    def paid(self, problem_slug: str) -> str:
-        data = self._get_problem_data(problem_slug)
+    async def paid(self, problem_slug: str) -> str:
+        data = await self._get_problem_data(problem_slug)
         return data.is_paid_only
 
-    def problem_id(self, problem_slug: str) -> str:
-        data = self._get_problem_data(problem_slug)
+    async def problem_id(self, problem_slug: str) -> str:
+        data = await self._get_problem_data(problem_slug)
         return data.question_frontend_id
 
-    def likes(self, problem_slug: str) -> int:
-        data = self._get_problem_data(problem_slug)
+    async def likes(self, problem_slug: str) -> int:
+        data = await self._get_problem_data(problem_slug)
         likes = data.likes
 
         if not isinstance(likes, int):
@@ -175,8 +198,8 @@ class LeetcodeData:
 
         return likes
 
-    def dislikes(self, problem_slug: str) -> int:
-        data = self._get_problem_data(problem_slug)
+    async def dislikes(self, problem_slug: str) -> int:
+        data = await self._get_problem_data(problem_slug)
         dislikes = data.dislikes
 
         if not isinstance(dislikes, int):
@@ -184,8 +207,8 @@ class LeetcodeData:
 
         return dislikes
 
-    def tags(self, problem_slug: str) -> List[str]:
-        data = self._get_problem_data(problem_slug)
+    async def tags(self, problem_slug: str) -> List[str]:
+        data = await self._get_problem_data(problem_slug)
         return list(map(lambda x: x.slug, data.topic_tags))
 
 
@@ -221,7 +244,40 @@ def get_leetcode_task_handles() -> Iterator[Tuple[str, str, str]]:
             yield (topic, stat.question__title, stat.question__title_slug)
 
 
-def generate() -> None:
+async def generate_anki_note(
+    leetcode_data: LeetcodeData,
+    leetcode_model: genanki.Model,
+    leetcode_task_handle: str,
+    leetcode_task_title: str,
+    topic: str,
+) -> LeetcodeNote:
+    return LeetcodeNote(
+        model=leetcode_model,
+        fields=[
+            leetcode_task_handle,
+            str(await leetcode_data.problem_id(leetcode_task_handle)),
+            leetcode_task_title,
+            topic,
+            await leetcode_data.description(leetcode_task_handle),
+            await leetcode_data.difficulty(leetcode_task_handle),
+            "yes" if await leetcode_data.paid(leetcode_task_handle) else "no",
+            str(await leetcode_data.likes(leetcode_task_handle)),
+            str(await leetcode_data.dislikes(leetcode_task_handle)),
+            str(await leetcode_data.submissions_total(leetcode_task_handle)),
+            str(await leetcode_data.submissions_accepted(leetcode_task_handle)),
+            str(
+                int(
+                    await leetcode_data.submissions_accepted(leetcode_task_handle)
+                    / await leetcode_data.submissions_total(leetcode_task_handle)
+                    * 100
+                )
+            ),
+        ],
+        tags=await leetcode_data.tags(leetcode_task_handle),
+    )
+
+
+async def generate(start: int, stop: int) -> None:
     leetcode_model = genanki.Model(
         LEETCODE_ANKI_MODEL_ID,
         "Leetcode model",
@@ -279,39 +335,35 @@ def generate() -> None:
     )
     leetcode_deck = genanki.Deck(LEETCODE_ANKI_DECK_ID, "leetcode")
     leetcode_data = LeetcodeData()
-    for topic, leetcode_task_title, leetcode_task_handle in tqdm(
-        list(get_leetcode_task_handles())
-    ):
 
-        leetcode_note = LeetcodeNote(
-            model=leetcode_model,
-            fields=[
+    note_generators: List[Coroutine[Any, Any, LeetcodeNote]] = []
+
+    for topic, leetcode_task_title, leetcode_task_handle in list(
+        get_leetcode_task_handles()
+    )[start:stop]:
+        note_generators.append(
+            generate_anki_note(
+                leetcode_data,
+                leetcode_model,
                 leetcode_task_handle,
-                str(leetcode_data.problem_id(leetcode_task_handle)),
                 leetcode_task_title,
                 topic,
-                leetcode_data.description(leetcode_task_handle),
-                leetcode_data.difficulty(leetcode_task_handle),
-                "yes" if leetcode_data.paid(leetcode_task_handle) else "no",
-                str(leetcode_data.likes(leetcode_task_handle)),
-                str(leetcode_data.dislikes(leetcode_task_handle)),
-                str(leetcode_data.submissions_total(leetcode_task_handle)),
-                str(leetcode_data.submissions_accepted(leetcode_task_handle)),
-                str(
-                    int(
-                        leetcode_data.submissions_accepted(leetcode_task_handle)
-                        / leetcode_data.submissions_total(leetcode_task_handle)
-                        * 100
-                    )
-                ),
-            ],
-            tags=leetcode_data.tags(leetcode_task_handle),
+            )
         )
-        leetcode_deck.add_note(leetcode_note)
 
-        # Write each time due to swagger bug causing the app hang indefinitely
-        genanki.Package(leetcode_deck).write_to_file(OUTPUT_FILE)
+    for leetcode_note in tqdm(note_generators):
+        leetcode_deck.add_note(await leetcode_note)
+
+    genanki.Package(leetcode_deck).write_to_file(OUTPUT_FILE)
+
+
+async def main() -> None:
+    args = parse_args()
+
+    start, stop = args.start, args.stop
+    await generate(start, stop)
 
 
 if __name__ == "__main__":
-    generate()
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())

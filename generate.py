@@ -1,19 +1,20 @@
 #!/usr/bin/env python3
-
 import argparse
 import asyncio
+import functools
 import json
 import logging
 import os
 import time
 from functools import lru_cache
-from typing import Any, Coroutine, Dict, Iterator, List, Tuple
+from typing import Any, Callable, Coroutine, Dict, Iterator, List, Tuple
 
 import diskcache
 # https://github.com/kerrickstaley/genanki
 import genanki  # type: ignore
 # https://github.com/prius/python-leetcode
 import leetcode  # type: ignore
+import urllib3
 from tqdm import tqdm
 
 cookies = {
@@ -47,6 +48,31 @@ def parse_args() -> argparse.Namespace:
     return args
 
 
+def retry(times: int, exceptions: Tuple[Exception], delay: float) -> Callable:
+    """
+    Retry Decorator
+    Retries the wrapped function/method `times` times if the exceptions listed
+    in `exceptions` are thrown
+    """
+
+    def decorator(func):
+        @functools.wraps(func)
+        async def wrapper(*args, **kwargs):
+            for attempt in range(times - 1):
+                try:
+                    return await func(*args, **kwargs)
+                except exceptions:
+                    logging.exception(f"Exception occured, try {attempt + 1}/{times}")
+                    time.sleep(delay)
+
+            logging.error("Last try")
+            return await func(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
 class LeetcodeData:
     def __init__(self) -> None:
 
@@ -70,6 +96,7 @@ class LeetcodeData:
             os.mkdir(CACHE_DIR)
         self._cache = diskcache.Cache(CACHE_DIR)
 
+    @retry(times=3, exceptions=(urllib3.exceptions.ProtocolError,), delay=5)
     async def _get_problem_data(self, problem_slug: str) -> Dict[str, str]:
         if problem_slug in self._cache:
             return self._cache[problem_slug]

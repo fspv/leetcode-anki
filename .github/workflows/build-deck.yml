@@ -1,0 +1,50 @@
+---
+name: Build Anki deck
+on: push
+jobs:
+  build-anki-deck:
+    name: Build Anki deck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.9
+      - name: Install requirements
+        run: pip install -r requirements.txt
+      - name: Test build Anki Deck
+        run: python generate.py --stop 3
+        env:
+          LEETCODE_CSRF_TOKEN: ${{ secrets.LEETCODE_CSRF_TOKEN }}
+          LEETCODE_SESSION_ID: ${{ secrets.LEETCODE_SESSION_ID }}
+      - name: Build Anki Deck
+        run: python generate.py
+        env:
+          LEETCODE_CSRF_TOKEN: ${{ secrets.LEETCODE_CSRF_TOKEN }}
+          LEETCODE_SESSION_ID: ${{ secrets.LEETCODE_SESSION_ID }}
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: true
+          prerelease: true
+      - name: Upload release asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./leetcode.apkg
+          asset_name: leetcode.apkg
+          asset_content_type: application/octet-stream
+      - name: Publish release
+        uses: StuYarrow/publish-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          id: ${{ steps.create_release.outputs.id }}

@@ -1,3 +1,6 @@
+
+![build](https://github.com/prius/leetcode-anki/actions/workflows/build-deck.yml/badge.svg)
+
 # Leetcode Anki card generator
 
 ## Summary

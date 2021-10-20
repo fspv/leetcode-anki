@@ -1,4 +1,4 @@
-python-leetcode
+python-leetcode==1.0.6
 diskcache
 genanki
 tqdm

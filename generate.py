@@ -14,13 +14,9 @@ import diskcache
 import genanki  # type: ignore
 # https://github.com/prius/python-leetcode
 import leetcode  # type: ignore
+import leetcode.auth  # type: ignore
 import urllib3
 from tqdm import tqdm
-
-cookies = {
-    "csrftoken": os.environ["LEETCODE_CSRF_TOKEN"],
-    "LEETCODE_SESSION": os.environ["LEETCODE_SESSION_ID"],
-}
 
 LEETCODE_ANKI_MODEL_ID = 4567610856
 LEETCODE_ANKI_DECK_ID = 8589798175
@@ -77,19 +73,7 @@ class LeetcodeData:
     def __init__(self) -> None:
 
         # Initialize leetcode API client
-        cookies = {
-            "csrftoken": os.environ["LEETCODE_CSRF_TOKEN"],
-            "LEETCODE_SESSION": os.environ["LEETCODE_SESSION_ID"],
-        }
-
-        configuration = leetcode.Configuration()
-
-        configuration.api_key["x-csrftoken"] = cookies["csrftoken"]
-        configuration.api_key["csrftoken"] = cookies["csrftoken"]
-        configuration.api_key["LEETCODE_SESSION"] = cookies["LEETCODE_SESSION"]
-        configuration.api_key["Referer"] = "https://leetcode.com"
-        configuration.debug = False
-        self._api_instance = leetcode.DefaultApi(leetcode.ApiClient(configuration))
+        self._api_instance = get_leetcode_api_client()
 
         # Init problem data cache
         if not os.path.exists(CACHE_DIR):
@@ -250,9 +234,12 @@ class LeetcodeNote(genanki.Note):
 def get_leetcode_api_client() -> leetcode.DefaultApi:
     configuration = leetcode.Configuration()
 
-    configuration.api_key["x-csrftoken"] = cookies["csrftoken"]
-    configuration.api_key["csrftoken"] = cookies["csrftoken"]
-    configuration.api_key["LEETCODE_SESSION"] = cookies["LEETCODE_SESSION"]
+    session_id = os.environ["LEETCODE_SESSION_ID"]
+    csrf_token = leetcode.auth.get_csrf_cookie(session_id)
+
+    configuration.api_key["x-csrftoken"] = csrf_token
+    configuration.api_key["csrftoken"] = csrf_token
+    configuration.api_key["LEETCODE_SESSION"] = session_id
     configuration.api_key["Referer"] = "https://leetcode.com"
     configuration.debug = False
     api_instance = leetcode.DefaultApi(leetcode.ApiClient(configuration))

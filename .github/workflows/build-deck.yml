@@ -22,13 +22,11 @@ jobs:
       - name: Test build Anki Deck
         run: python generate.py --stop 3
         env:
-          LEETCODE_CSRF_TOKEN: ${{ secrets.LEETCODE_CSRF_TOKEN }}
           LEETCODE_SESSION_ID: ${{ secrets.LEETCODE_SESSION_ID }}
       - name: Build Anki Deck
         run: python generate.py
         if: github.ref == 'refs/heads/master'
         env:
-          LEETCODE_CSRF_TOKEN: ${{ secrets.LEETCODE_CSRF_TOKEN }}
           LEETCODE_SESSION_ID: ${{ secrets.LEETCODE_SESSION_ID }}
       - name: Create Release
         id: create_release

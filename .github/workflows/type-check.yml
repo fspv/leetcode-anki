@@ -1,0 +1,19 @@
+---
+name: Typing
+on: push
+jobs:
+  mypy:
+    name: mypy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.9
+      - name: Install requirements
+        run: pip install -r requirements.txt
+      - name: Install mypy
+        run: pip install mypy
+      - name: Run mypy
+        run: mypy .

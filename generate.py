@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+"""
+This script generates an Anki deck with all the leetcode problems currently
+known.
+"""
+
 import argparse
 import asyncio
 import functools
@@ -9,14 +14,16 @@ import time
 from functools import lru_cache
 from typing import Any, Callable, Coroutine, Dict, Iterator, List, Tuple
 
-import diskcache
+import diskcache  # type: ignore
+
 # https://github.com/kerrickstaley/genanki
 import genanki  # type: ignore
+
 # https://github.com/prius/python-leetcode
 import leetcode  # type: ignore
 import leetcode.auth  # type: ignore
-import urllib3
-from tqdm import tqdm
+import urllib3  # type: ignore
+from tqdm import tqdm  # type: ignore
 
 LEETCODE_ANKI_MODEL_ID = 4567610856
 LEETCODE_ANKI_DECK_ID = 8589798175
@@ -31,6 +38,9 @@ logging.getLogger().setLevel(logging.INFO)
 
 
 def parse_args() -> argparse.Namespace:
+    """
+    Parse command line arguments for the script
+    """
     parser = argparse.ArgumentParser(description="Generate Anki cards for leetcode")
     parser.add_argument(
         "--start", type=int, help="Start generation from this problem", default=0
@@ -58,7 +68,9 @@ def retry(times: int, exceptions: Tuple[Exception], delay: float) -> Callable:
                 try:
                     return await func(*args, **kwargs)
                 except exceptions:
-                    logging.exception(f"Exception occured, try {attempt + 1}/{times}")
+                    logging.exception(
+                        "Exception occured, try %s/%s", attempt + 1, times
+                    )
                     time.sleep(delay)
 
             logging.error("Last try")
@@ -70,18 +82,29 @@ def retry(times: int, exceptions: Tuple[Exception], delay: float) -> Callable:
 
 
 class LeetcodeData:
-    def __init__(self) -> None:
+    """
+    Retrieves and caches the data for problems, acquired from the leetcode API.
 
-        # Initialize leetcode API client
+    This data can be later accessed using provided methods with corresponding
+    names.
+    """
+
+    def __init__(self) -> None:
+        """
+        Initialize leetcode API and disk cache for API responses
+        """
         self._api_instance = get_leetcode_api_client()
 
-        # Init problem data cache
         if not os.path.exists(CACHE_DIR):
             os.mkdir(CACHE_DIR)
         self._cache = diskcache.Cache(CACHE_DIR)
 
     @retry(times=3, exceptions=(urllib3.exceptions.ProtocolError,), delay=5)
     async def _get_problem_data(self, problem_slug: str) -> Dict[str, str]:
+        """
+        Get data about a specific problem (method output if cached to reduce
+        the load on the leetcode API)
+        """
         if problem_slug in self._cache:
             return self._cache[problem_slug]
 
@@ -161,47 +184,74 @@ class LeetcodeData:
         return data
 
     async def _get_description(self, problem_slug: str) -> str:
+        """
+        Problem description
+        """
         data = await self._get_problem_data(problem_slug)
         return data.content or "No content"
 
     async def _stats(self, problem_slug: str) -> Dict[str, str]:
+        """
+        Various stats about problem. Such as number of accepted solutions, etc.
+        """
         data = await self._get_problem_data(problem_slug)
         return json.loads(data.stats)
 
     async def submissions_total(self, problem_slug: str) -> int:
-        return (await self._stats(problem_slug))["totalSubmissionRaw"]
+        """
+        Total number of submissions of the problem
+        """
+        return int((await self._stats(problem_slug))["totalSubmissionRaw"])
 
     async def submissions_accepted(self, problem_slug: str) -> int:
-        return (await self._stats(problem_slug))["totalAcceptedRaw"]
+        """
+        Number of accepted submissions of the problem
+        """
+        return int((await self._stats(problem_slug))["totalAcceptedRaw"])
 
     async def description(self, problem_slug: str) -> str:
+        """
+        Problem description
+        """
         return await self._get_description(problem_slug)
 
-    async def solution(self, problem_slug: str) -> str:
-        return ""
-
     async def difficulty(self, problem_slug: str) -> str:
+        """
+        Problem difficulty. Returns colored HTML version, so it can be used
+        directly in Anki
+        """
         data = await self._get_problem_data(problem_slug)
         diff = data.difficulty
 
         if diff == "Easy":
             return "<font color='green'>Easy</font>"
-        elif diff == "Medium":
+
+        if diff == "Medium":
             return "<font color='orange'>Medium</font>"
-        elif diff == "Hard":
+
+        if diff == "Hard":
             return "<font color='red'>Hard</font>"
-        else:
-            raise ValueError(f"Incorrect difficulty: {diff}")
+
+        raise ValueError(f"Incorrect difficulty: {diff}")
 
     async def paid(self, problem_slug: str) -> str:
+        """
+        Problem's "available for paid subsribers" status
+        """
         data = await self._get_problem_data(problem_slug)
         return data.is_paid_only
 
     async def problem_id(self, problem_slug: str) -> str:
+        """
+        Numerical id of the problem
+        """
         data = await self._get_problem_data(problem_slug)
         return data.question_frontend_id
 
     async def likes(self, problem_slug: str) -> int:
+        """
+        Number of likes for the problem
+        """
         data = await self._get_problem_data(problem_slug)
         likes = data.likes
 
@@ -211,6 +261,9 @@ class LeetcodeData:
         return likes
 
     async def dislikes(self, problem_slug: str) -> int:
+        """
+        Number of dislikes for the problem
+        """
         data = await self._get_problem_data(problem_slug)
         dislikes = data.dislikes
 
@@ -220,15 +273,26 @@ class LeetcodeData:
         return dislikes
 
     async def tags(self, problem_slug: str) -> List[str]:
+        """
+        List of the tags for this problem (string slugs)
+        """
         data = await self._get_problem_data(problem_slug)
         return list(map(lambda x: x.slug, data.topic_tags))
 
     async def freq_bar(self, problem_slug: str) -> float:
+        """
+        Returns percentage for frequency bar
+        """
         data = await self._get_problem_data(problem_slug)
         return data.freq_bar or 0
 
 
 class LeetcodeNote(genanki.Note):
+    """
+    Extended base class for the Anki note, that correctly sets the unique
+    identifier of the note.
+    """
+
     @property
     def guid(self):
         # Hash by leetcode task handle
@@ -237,6 +301,12 @@ class LeetcodeNote(genanki.Note):
 
 @lru_cache(None)
 def get_leetcode_api_client() -> leetcode.DefaultApi:
+    """
+    Leetcode API instance constructor.
+
+    This is a singleton, because we don't need to create a separate client
+    each time
+    """
     configuration = leetcode.Configuration()
 
     session_id = os.environ["LEETCODE_SESSION_ID"]
@@ -253,6 +323,9 @@ def get_leetcode_api_client() -> leetcode.DefaultApi:
 
 
 def get_leetcode_task_handles() -> Iterator[Tuple[str, str, str]]:
+    """
+    Get task handles for all the leetcode problems.
+    """
     api_instance = get_leetcode_api_client()
 
     for topic in ["algorithms", "database", "shell", "concurrency"]:
@@ -270,6 +343,9 @@ async def generate_anki_note(
     leetcode_task_title: str,
     topic: str,
 ) -> LeetcodeNote:
+    """
+    Generate a single Anki flashcard
+    """
     return LeetcodeNote(
         model=leetcode_model,
         fields=[
@@ -300,6 +376,9 @@ async def generate_anki_note(
 
 
 async def generate(start: int, stop: int) -> None:
+    """
+    Generate an Anki deck
+    """
     leetcode_model = genanki.Model(
         LEETCODE_ANKI_MODEL_ID,
         "Leetcode model",
@@ -386,6 +465,9 @@ async def generate(start: int, stop: int) -> None:
 
 
 async def main() -> None:
+    """
+    The main script logic
+    """
     args = parse_args()
 
     start, stop = args.start, args.stop

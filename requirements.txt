@@ -1,4 +1,4 @@
-python-leetcode==1.0.9
+python-leetcode==1.0.10
 setuptools==57.5.0
 diskcache
 genanki

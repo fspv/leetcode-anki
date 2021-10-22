@@ -91,6 +91,7 @@ class LeetcodeData:
             query="""
                 query getQuestionDetail($titleSlug: String!) {
                   question(titleSlug: $titleSlug) {
+                    freqBar
                     questionId
                     questionFrontendId
                     boundTopicId
@@ -222,6 +223,10 @@ class LeetcodeData:
         data = await self._get_problem_data(problem_slug)
         return list(map(lambda x: x.slug, data.topic_tags))
 
+    async def freq_bar(self, problem_slug: str) -> float:
+        data = await self._get_problem_data(problem_slug)
+        return data.freq_bar or 0
+
 
 class LeetcodeNote(genanki.Note):
     @property
@@ -286,8 +291,11 @@ async def generate_anki_note(
                     * 100
                 )
             ),
+            str(await leetcode_data.freq_bar(leetcode_task_handle)),
         ],
         tags=await leetcode_data.tags(leetcode_task_handle),
+        # FIXME: sort field doesn't work doesn't work
+        sort_field=str(await leetcode_data.freq_bar(leetcode_task_handle)).zfill(3),
     )
 
 
@@ -308,6 +316,7 @@ async def generate(start: int, stop: int) -> None:
             {"name": "SubmissionsTotal"},
             {"name": "SubmissionsAccepted"},
             {"name": "SumissionAcceptRate"},
+            {"name": "Frequency"},
             # TODO: add hints
         ],
         templates=[
@@ -322,6 +331,11 @@ async def generate(start: int, stop: int) -> None:
                 ({{SumissionAcceptRate}}%)
                 <br/>
                 <b>Topic:</b> {{Topic}}<br/>
+                <b>Frequency:</b>
+                <progress value="{{Frequency}}" max="100">
+                {{Frequency}}%
+                </progress>
+                <br/>
                 <b>URL:</b>
                 <a href='https://leetcode.com/problems/{{Slug}}/'>
                     https://leetcode.com/problems/{{Slug}}/

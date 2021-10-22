@@ -1,5 +1,8 @@
 
 ![build](https://github.com/prius/leetcode-anki/actions/workflows/build-deck.yml/badge.svg)
+![style](https://github.com/prius/leetcode-anki/actions/workflows/style-check.yml/badge.svg)
+![tests](https://github.com/prius/leetcode-anki/actions/workflows/tests.yml/badge.svg)
+![types](https://github.com/prius/leetcode-anki/actions/workflows/type-check.yml/badge.svg)
 
 # Leetcode Anki card generator
 

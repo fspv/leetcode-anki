@@ -3,6 +3,7 @@
 ![style](https://github.com/prius/leetcode-anki/actions/workflows/style-check.yml/badge.svg)
 ![tests](https://github.com/prius/leetcode-anki/actions/workflows/tests.yml/badge.svg)
 ![types](https://github.com/prius/leetcode-anki/actions/workflows/type-check.yml/badge.svg)
+![license](https://img.shields.io/github/license/prius/leetcode-anki)
 
 # Leetcode Anki card generator
 

@@ -13,6 +13,8 @@ jobs:
           python-version: 3.9
       - name: Install requirements
         run: pip install -r requirements.txt
+      - name: Install test requirements
+        run: pip install -r test-requirements.txt
       - name: Install pytest
         run: pip install pytest
       - name: Run pytest

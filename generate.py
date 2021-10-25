@@ -25,7 +25,7 @@ import leetcode.api_client  # type: ignore
 import leetcode.auth  # type: ignore
 import leetcode.configuration  # type: ignore
 import leetcode.models.graphql_query  # type: ignore
-import leetcode.models.graphql_query_variables  # type: ignore
+import leetcode.models.graphql_query_get_question_detail_variables  # type: ignore
 import urllib3  # type: ignore
 from tqdm import tqdm  # type: ignore
 
@@ -172,7 +172,7 @@ class LeetcodeData:
                   }
                 }
             """,
-            variables=leetcode.models.graphql_query_variables.GraphqlQueryVariables(
+            variables=leetcode.models.graphql_query_get_question_detail_variables.GraphqlQueryGetQuestionDetailVariables(  # noqa: E501
                 title_slug=problem_slug
             ),
             operation_name="getQuestionDetail",

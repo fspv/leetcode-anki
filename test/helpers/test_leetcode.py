@@ -79,9 +79,9 @@ class TestLeetcode:
 
         wrapper = decorator(func)
 
-        await wrapper() == "test"
+        assert (await wrapper()) == "test"
 
-        func.call_count = 3
+        assert func.call_count == 3
 
 
 class TestLeetcodeData:

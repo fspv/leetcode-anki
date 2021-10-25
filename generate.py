@@ -20,8 +20,12 @@ import diskcache  # type: ignore
 import genanki  # type: ignore
 
 # https://github.com/prius/python-leetcode
-import leetcode  # type: ignore
+import leetcode.api.default_api  # type: ignore
+import leetcode.api_client  # type: ignore
 import leetcode.auth  # type: ignore
+import leetcode.configuration  # type: ignore
+import leetcode.models.graphql_query  # type: ignore
+import leetcode.models.graphql_query_variables  # type: ignore
 import urllib3  # type: ignore
 from tqdm import tqdm  # type: ignore
 
@@ -110,7 +114,7 @@ class LeetcodeData:
 
         api_instance = self._api_instance
 
-        graphql_request = leetcode.GraphqlQuery(
+        graphql_request = leetcode.models.graphql_query.GraphqlQuery(
             query="""
                 query getQuestionDetail($titleSlug: String!) {
                   question(titleSlug: $titleSlug) {
@@ -168,7 +172,9 @@ class LeetcodeData:
                   }
                 }
             """,
-            variables=leetcode.GraphqlQueryVariables(title_slug=problem_slug),
+            variables=leetcode.models.graphql_query_variables.GraphqlQueryVariables(
+                title_slug=problem_slug
+            ),
             operation_name="getQuestionDetail",
         )
 
@@ -300,14 +306,14 @@ class LeetcodeNote(genanki.Note):
 
 
 @lru_cache(None)
-def get_leetcode_api_client() -> leetcode.DefaultApi:
+def get_leetcode_api_client() -> leetcode.api.default_api.DefaultApi:
     """
     Leetcode API instance constructor.
 
     This is a singleton, because we don't need to create a separate client
     each time
     """
-    configuration = leetcode.Configuration()
+    configuration = leetcode.configuration.Configuration()
 
     session_id = os.environ["LEETCODE_SESSION_ID"]
     csrf_token = leetcode.auth.get_csrf_cookie(session_id)
@@ -317,7 +323,9 @@ def get_leetcode_api_client() -> leetcode.DefaultApi:
     configuration.api_key["LEETCODE_SESSION"] = session_id
     configuration.api_key["Referer"] = "https://leetcode.com"
     configuration.debug = False
-    api_instance = leetcode.DefaultApi(leetcode.ApiClient(configuration))
+    api_instance = leetcode.api.default_api.DefaultApi(
+        leetcode.api_client.ApiClient(configuration)
+    )
 
     return api_instance
 

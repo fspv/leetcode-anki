@@ -2,12 +2,11 @@ import asyncio
 import functools
 import json
 import logging
+import math
 import os
 import time
 from functools import lru_cache
-from typing import Callable, Dict, Iterator, List, Tuple, Type
-
-import diskcache  # type: ignore
+from typing import Callable, Dict, List, Tuple, Type, Union
 
 # https://github.com/prius/python-leetcode
 import leetcode.api.default_api  # type: ignore
@@ -16,7 +15,11 @@ import leetcode.auth  # type: ignore
 import leetcode.configuration  # type: ignore
 import leetcode.models.graphql_query  # type: ignore
 import leetcode.models.graphql_query_get_question_detail_variables  # type: ignore
+import leetcode.models.graphql_query_problemset_question_list_variables  # type: ignore
+import leetcode.models.graphql_query_problemset_question_list_variables_filter_input  # type: ignore
+import leetcode.models.graphql_question_detail  # type: ignore
 import urllib3  # type: ignore
+from tqdm import tqdm
 
 CACHE_DIR = "cache"
 
@@ -47,20 +50,6 @@ def _get_leetcode_api_client() -> leetcode.api.default_api.DefaultApi:
     )
 
     return api_instance
-
-
-def get_leetcode_task_handles() -> Iterator[Tuple[str, str, str]]:
-    """
-    Get task handles for all the leetcode problems.
-    """
-    api_instance = _get_leetcode_api_client()
-
-    for topic in ["algorithms", "database", "shell", "concurrency"]:
-        api_response = api_instance.api_problems_topic_get(topic=topic)
-        for stat_status_pair in api_response.stat_status_pairs:
-            stat = stat_status_pair.stat
-
-            yield (topic, stat.question__title, stat.question__title_slug)
 
 
 def retry(times: int, exceptions: Tuple[Type[Exception]], delay: float) -> Callable:
@@ -98,44 +87,117 @@ class LeetcodeData:
     names.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, start: int, stop: int) -> None:
         """
         Initialize leetcode API and disk cache for API responses
         """
+        if start < 0:
+            raise ValueError(f"Start must be non-negative: {start}")
+
+        if stop < 0:
+            raise ValueError(f"Stop must be non-negative: {start}")
+
+        if start > stop:
+            raise ValueError(f"Start (){start}) must be not greater than stop ({stop})")
+
+        self._start = start
+        self._stop = stop
+
         self._api_instance = _get_leetcode_api_client()
 
-        if not os.path.exists(CACHE_DIR):
-            os.mkdir(CACHE_DIR)
-        self._cache = diskcache.Cache(CACHE_DIR)
+        self._cache_container: Dict[
+            str, leetcode.models.graphql_question_detail.GraphqlQuestionDetail
+        ] = {}
+
+    @property
+    async def _cache(
+        self,
+    ) -> Dict[str, leetcode.models.graphql_question_detail.GraphqlQuestionDetail]:
+        """
+        Cached method to return dict (problem_slug -> question details)
+        """
+        cache = self._cache_container
+
+        if not cache:
+            problems = await self._get_problems_data()
+            cache = {problem.title_slug: problem for problem in problems}
+
+            self._cache_container = cache
+
+        return cache
 
     @retry(times=3, exceptions=(urllib3.exceptions.ProtocolError,), delay=5)
-    async def _get_problem_data(self, problem_slug: str) -> Dict[str, str]:
-        """
-        Get data about a specific problem (method output if cached to reduce
-        the load on the leetcode API)
-        """
-        if problem_slug in self._cache:
-            return self._cache[problem_slug]
-
+    async def _get_problems_count(self) -> int:
         api_instance = self._api_instance
 
         graphql_request = leetcode.models.graphql_query.GraphqlQuery(
             query="""
-                query getQuestionDetail($titleSlug: String!) {
-                  question(titleSlug: $titleSlug) {
-                    freqBar
+            query problemsetQuestionList($categorySlug: String, $limit: Int, $skip: Int, $filters: QuestionListFilterInput) {
+              problemsetQuestionList: questionList(
+                categorySlug: $categorySlug
+                limit: $limit
+                skip: $skip
+                filters: $filters
+              ) {
+                totalNum
+              }
+            }
+            """,
+            variables=leetcode.models.graphql_query_problemset_question_list_variables.GraphqlQueryProblemsetQuestionListVariables(
+                category_slug="",
+                limit=1,
+                skip=0,
+                filters=leetcode.models.graphql_query_problemset_question_list_variables_filter_input.GraphqlQueryProblemsetQuestionListVariablesFilterInput(
+                    tags=[],
+                    # difficulty="MEDIUM",
+                    # status="NOT_STARTED",
+                    # list_id="7p5x763",  # Top Amazon Questions
+                    # premium_only=False,
+                ),
+            ),
+            operation_name="problemsetQuestionList",
+        )
+
+        # Critical section. Don't allow more than one parallel request to
+        # the Leetcode API
+        async with leetcode_api_access_lock:
+            time.sleep(2)  # Leetcode has a rate limiter
+            data = api_instance.graphql_post(body=graphql_request).data
+
+            return data.problemset_question_list.total_num or 0
+
+    @retry(times=3, exceptions=(urllib3.exceptions.ProtocolError,), delay=5)
+    async def _get_problems_data_page(
+        self, offset: int, page_size: int, page: int
+    ) -> List[leetcode.models.graphql_question_detail.GraphqlQuestionDetail]:
+        api_instance = self._api_instance
+        graphql_request = leetcode.models.graphql_query.GraphqlQuery(
+            query="""
+            query problemsetQuestionList($categorySlug: String, $limit: Int, $skip: Int, $filters: QuestionListFilterInput) {
+              problemsetQuestionList: questionList(
+                categorySlug: $categorySlug
+                limit: $limit
+                skip: $skip
+                filters: $filters
+              ) {
+                total: totalNum
+                questions: data {
                     questionId
                     questionFrontendId
                     boundTopicId
                     title
+                    titleSlug
+                    categoryTitle
+                    frequency
+                    freqBar
                     content
                     translatedTitle
-                    translatedContent
                     isPaidOnly
                     difficulty
                     likes
                     dislikes
                     isLiked
+                    isFavor
                     similarQuestions
                     contributors {
                       username
@@ -158,41 +220,99 @@ class LeetcodeData:
                       __typename
                     }
                     stats
+                    acRate
+                    codeDefinition
                     hints
                     solution {
                       id
                       canSeeDetail
                       __typename
                     }
+                    hasSolution
+                    hasVideoSolution
                     status
                     sampleTestCase
+                    enableRunCode
                     metaData
+                    translatedContent
                     judgerAvailable
                     judgeType
                     mysqlSchemas
-                    enableRunCode
                     enableTestMode
                     envInfo
                     __typename
-                  }
                 }
+              }
+            }
             """,
-            variables=leetcode.models.graphql_query_get_question_detail_variables.GraphqlQueryGetQuestionDetailVariables(  # noqa: E501
-                title_slug=problem_slug
+            variables=leetcode.models.graphql_query_problemset_question_list_variables.GraphqlQueryProblemsetQuestionListVariables(
+                category_slug="",
+                limit=page_size,
+                skip=offset + page * page_size,
+                filters=leetcode.models.graphql_query_problemset_question_list_variables_filter_input.GraphqlQueryProblemsetQuestionListVariablesFilterInput(),
             ),
-            operation_name="getQuestionDetail",
+            operation_name="problemsetQuestionList",
         )
 
         # Critical section. Don't allow more than one parallel request to
         # the Leetcode API
         async with leetcode_api_access_lock:
             time.sleep(2)  # Leetcode has a rate limiter
-            data = api_instance.graphql_post(body=graphql_request).data.question
-
-        # Save data in the cache
-        self._cache[problem_slug] = data
+            data = api_instance.graphql_post(
+                body=graphql_request
+            ).data.problemset_question_list.questions
 
         return data
+
+    async def _get_problems_data(
+        self,
+    ) -> List[leetcode.models.graphql_question_detail.GraphqlQuestionDetail]:
+        problem_count = await self._get_problems_count()
+
+        if self._start > problem_count:
+            raise ValueError(
+                "Start ({self._start}) is greater than problems count ({problem_count})"
+            )
+
+        start = self._start
+        stop = min(self._stop, problem_count)
+
+        page_size = min(50, stop - start + 1)
+
+        problems: List[
+            leetcode.models.graphql_question_detail.GraphqlQuestionDetail
+        ] = []
+
+        logging.info(f"Fetching {stop - start + 1} problems {page_size} per page")
+
+        for page in tqdm(
+            range(math.ceil((stop - start + 1) / page_size)),
+            unit="problem",
+            unit_scale=page_size,
+        ):
+            data = await self._get_problems_data_page(start, page_size, page)
+            problems.extend(data)
+
+        return problems
+
+    async def all_problems_handles(self) -> List[str]:
+        """
+        Get all problem handles known.
+
+        Example: ["two-sum", "three-sum"]
+        """
+        return list((await self._cache).keys())
+
+    async def _get_problem_data(
+        self, problem_slug: str
+    ) -> leetcode.models.graphql_question_detail.GraphqlQuestionDetail:
+        """
+        TODO: Legacy method. Needed in the old architecture. Can be replaced
+        with direct cache calls later.
+        """
+        cache = await self._cache
+        if problem_slug in cache:
+            return cache[problem_slug]
 
     async def _get_description(self, problem_slug: str) -> str:
         """
@@ -296,3 +416,17 @@ class LeetcodeData:
         """
         data = await self._get_problem_data(problem_slug)
         return data.freq_bar or 0
+
+    async def title(self, problem_slug: str) -> float:
+        """
+        Returns problem title
+        """
+        data = await self._get_problem_data(problem_slug)
+        return data.title
+
+    async def category(self, problem_slug: str) -> float:
+        """
+        Returns problem category title
+        """
+        data = await self._get_problem_data(problem_slug)
+        return data.category_title

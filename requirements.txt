@@ -1,5 +1,4 @@
-python-leetcode==1.1.0
+python-leetcode==1.2.1
 setuptools==57.5.0
-diskcache
 genanki
 tqdm

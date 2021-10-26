@@ -37,5 +37,3 @@ make generate
 ```
 
 You'll get `leetcode.apkg` file, which you can import directly to your anki app.
-
-There also will be a `cache` directory created for the cached data about the problems. If you want to fetch more up to date information about the existing problems, delete this dir. Just keep in mind, it'll take a while to re-download the data about all the problems.

@@ -57,8 +57,6 @@ async def generate_anki_note(
     leetcode_data: leetcode_anki.helpers.leetcode.LeetcodeData,
     leetcode_model: genanki.Model,
     leetcode_task_handle: str,
-    leetcode_task_title: str,
-    topic: str,
 ) -> LeetcodeNote:
     """
     Generate a single Anki flashcard
@@ -68,8 +66,8 @@ async def generate_anki_note(
         fields=[
             leetcode_task_handle,
             str(await leetcode_data.problem_id(leetcode_task_handle)),
-            leetcode_task_title,
-            topic,
+            str(await leetcode_data.title(leetcode_task_handle)),
+            str(await leetcode_data.category(leetcode_task_handle)),
             await leetcode_data.description(leetcode_task_handle),
             await leetcode_data.difficulty(leetcode_task_handle),
             "yes" if await leetcode_data.paid(leetcode_task_handle) else "no",
@@ -158,24 +156,24 @@ async def generate(start: int, stop: int) -> None:
         ],
     )
     leetcode_deck = genanki.Deck(LEETCODE_ANKI_DECK_ID, "leetcode")
-    leetcode_data = leetcode_anki.helpers.leetcode.LeetcodeData()
+
+    leetcode_data = leetcode_anki.helpers.leetcode.LeetcodeData(start, stop)
 
     note_generators: List[Coroutine[Any, Any, LeetcodeNote]] = []
 
-    for topic, leetcode_task_title, leetcode_task_handle in list(
-        leetcode_anki.helpers.leetcode.get_leetcode_task_handles()
-    )[start:stop]:
+    task_handles = await leetcode_data.all_problems_handles()
+
+    logging.info("Generating flashcards")
+    for leetcode_task_handle in task_handles:
         note_generators.append(
             generate_anki_note(
                 leetcode_data,
                 leetcode_model,
                 leetcode_task_handle,
-                leetcode_task_title,
-                topic,
             )
         )
 
-    for leetcode_note in tqdm(note_generators):
+    for leetcode_note in tqdm(note_generators, unit="flashcard"):
         leetcode_deck.add_note(await leetcode_note)
 
     genanki.Package(leetcode_deck).write_to_file(OUTPUT_FILE)

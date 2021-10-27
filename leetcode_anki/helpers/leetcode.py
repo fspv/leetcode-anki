@@ -164,67 +164,23 @@ class LeetcodeData:
                 skip: $skip
                 filters: $filters
               ) {
-                total: totalNum
                 questions: data {
-                    questionId
                     questionFrontendId
-                    boundTopicId
                     title
                     titleSlug
                     categoryTitle
-                    frequency
                     freqBar
                     content
-                    translatedTitle
                     isPaidOnly
                     difficulty
                     likes
                     dislikes
-                    isLiked
-                    isFavor
-                    similarQuestions
-                    contributors {
-                      username
-                      profileUrl
-                      avatarUrl
-                      __typename
-                    }
-                    langToValidPlayground
                     topicTags {
                       name
                       slug
-                      translatedName
-                      __typename
-                    }
-                    companyTagStats
-                    codeSnippets {
-                      lang
-                      langSlug
-                      code
-                      __typename
                     }
                     stats
-                    acRate
-                    codeDefinition
                     hints
-                    solution {
-                      id
-                      canSeeDetail
-                      __typename
-                    }
-                    hasSolution
-                    hasVideoSolution
-                    status
-                    sampleTestCase
-                    enableRunCode
-                    metaData
-                    translatedContent
-                    judgerAvailable
-                    judgeType
-                    mysqlSchemas
-                    enableTestMode
-                    envInfo
-                    __typename
                 }
               }
             }

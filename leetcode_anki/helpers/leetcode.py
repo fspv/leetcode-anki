@@ -214,7 +214,7 @@ class LeetcodeData:
         start = self._start
         stop = min(self._stop, problem_count)
 
-        page_size = min(50, stop - start + 1)
+        page_size = min(3000, stop - start + 1)
 
         problems: List[
             leetcode.models.graphql_question_detail.GraphqlQuestionDetail

@@ -83,7 +83,7 @@ class LeetcodeData:
     names.
     """
 
-    def __init__(self, start: int, stop: int) -> None:
+    def __init__(self, start: int, stop: int, page_size: int = 1000) -> None:
         """
         Initialize leetcode API and disk cache for API responses
         """
@@ -93,11 +93,15 @@ class LeetcodeData:
         if stop < 0:
             raise ValueError(f"Stop must be non-negative: {start}")
 
+        if page_size < 0:
+            raise ValueError(f"Page size must be greater than 0: {page_size}")
+
         if start > stop:
             raise ValueError(f"Start (){start}) must be not greater than stop ({stop})")
 
         self._start = start
         self._stop = stop
+        self._page_size = page_size
 
     @cached_property
     def _api_instance(self) -> leetcode.api.default_api.DefaultApi:
@@ -214,7 +218,7 @@ class LeetcodeData:
         start = self._start
         stop = min(self._stop, problem_count)
 
-        page_size = min(3000, stop - start + 1)
+        page_size = min(self._page_size, stop - start + 1)
 
         problems: List[
             leetcode.models.graphql_question_detail.GraphqlQuestionDetail

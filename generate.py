@@ -41,6 +41,12 @@ def parse_args() -> argparse.Namespace:
         help="Get at most this many problems (decrease if leetcode API times out)",
         default=1000,
     )
+    parser.add_argument(
+        "--list-id",
+        type=str,
+        help="Get all questions from a specific list id (https://leetcode.com/list?selectedList=<list_id>",
+        default="",
+    )
 
     args = parser.parse_args()
 
@@ -96,7 +102,7 @@ async def generate_anki_note(
     )
 
 
-async def generate(start: int, stop: int, page_size: int) -> None:
+async def generate(start: int, stop: int, page_size: int, list_id: str) -> None:
     """
     Generate an Anki deck
     """
@@ -163,7 +169,7 @@ async def generate(start: int, stop: int, page_size: int) -> None:
     )
     leetcode_deck = genanki.Deck(LEETCODE_ANKI_DECK_ID, "leetcode")
 
-    leetcode_data = leetcode_anki.helpers.leetcode.LeetcodeData(start, stop, page_size)
+    leetcode_data = leetcode_anki.helpers.leetcode.LeetcodeData(start, stop, page_size, list_id)
 
     note_generators: List[Coroutine[Any, Any, LeetcodeNote]] = []
 
@@ -191,8 +197,8 @@ async def main() -> None:
     """
     args = parse_args()
 
-    start, stop, page_size = args.start, args.stop, args.page_size
-    await generate(start, stop, page_size)
+    start, stop, page_size, list_id = args.start, args.stop, args.page_size, args.list_id
+    await generate(start, stop, page_size, list_id)
 
 
 if __name__ == "__main__":

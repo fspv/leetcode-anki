@@ -77,10 +77,14 @@ def dummy_return_question_detail_dict(
 @mock.patch("os.environ", mock.MagicMock(return_value={"LEETCODE_SESSION_ID": "test"}))
 @mock.patch("leetcode.auth", mock.MagicMock())
 class TestLeetcode:
+    # pyre-fixme[56]: Pyre was not able to infer the type of the decorator
+    #  `pytest.mark.asyncio`.
     @pytest.mark.asyncio
     async def test_get_leetcode_api_client(self) -> None:
         assert leetcode_anki.helpers.leetcode._get_leetcode_api_client()
 
+    # pyre-fixme[56]: Pyre was not able to infer the type of the decorator
+    #  `pytest.mark.asyncio`.
     @pytest.mark.asyncio
     async def test_retry(self) -> None:
         decorator = leetcode_anki.helpers.leetcode.retry(
@@ -134,6 +138,8 @@ class TestLeetcodeData:
             0, 10000
         )
 
+    # pyre-fixme[56]: Pyre was not able to infer the type of the decorator
+    #  `pytest.mark.asyncio`.
     @pytest.mark.asyncio
     @mock.patch(
         "leetcode_anki.helpers.leetcode.LeetcodeData._get_problems_data",
@@ -142,6 +148,8 @@ class TestLeetcodeData:
     async def test_init(self) -> None:
         self._leetcode_data._cache["test"] = QUESTION_DETAIL
 
+    # pyre-fixme[56]: Pyre was not able to infer the type of the decorator
+    #  `pytest.mark.asyncio`.
     @pytest.mark.asyncio
     @mock.patch(
         "leetcode_anki.helpers.leetcode.LeetcodeData._get_problems_data",
@@ -151,6 +159,8 @@ class TestLeetcodeData:
         self._leetcode_data._cache["test"] = QUESTION_DETAIL
         assert (await self._leetcode_data.description("test")) == "test content"
 
+    # pyre-fixme[56]: Pyre was not able to infer the type of the decorator
+    #  `pytest.mark.asyncio`.
     @pytest.mark.asyncio
     @mock.patch(
         "leetcode_anki.helpers.leetcode.LeetcodeData._get_problems_data",
@@ -162,6 +172,8 @@ class TestLeetcodeData:
         assert (await self._leetcode_data.submissions_total("test")) == 1
         assert (await self._leetcode_data.submissions_accepted("test")) == 1
 
+    # pyre-fixme[56]: Pyre was not able to infer the type of the decorator
+    #  `pytest.mark.asyncio`.
     @pytest.mark.asyncio
     @mock.patch(
         "leetcode_anki.helpers.leetcode.LeetcodeData._get_problems_data",
@@ -173,6 +185,8 @@ class TestLeetcodeData:
         QUESTION_DETAIL.difficulty = "Easy"
         assert "Easy" in (await self._leetcode_data.difficulty("test"))
 
+    # pyre-fixme[56]: Pyre was not able to infer the type of the decorator
+    #  `pytest.mark.asyncio`.
     @pytest.mark.asyncio
     @mock.patch(
         "leetcode_anki.helpers.leetcode.LeetcodeData._get_problems_data",
@@ -184,6 +198,8 @@ class TestLeetcodeData:
         QUESTION_DETAIL.difficulty = "Medium"
         assert "Medium" in (await self._leetcode_data.difficulty("test"))
 
+    # pyre-fixme[56]: Pyre was not able to infer the type of the decorator
+    #  `pytest.mark.asyncio`.
     @pytest.mark.asyncio
     @mock.patch(
         "leetcode_anki.helpers.leetcode.LeetcodeData._get_problems_data",
@@ -195,6 +211,8 @@ class TestLeetcodeData:
         QUESTION_DETAIL.difficulty = "Hard"
         assert "Hard" in (await self._leetcode_data.difficulty("test"))
 
+    # pyre-fixme[56]: Pyre was not able to infer the type of the decorator
+    #  `pytest.mark.asyncio`.
     @pytest.mark.asyncio
     @mock.patch(
         "leetcode_anki.helpers.leetcode.LeetcodeData._get_problems_data",
@@ -205,6 +223,8 @@ class TestLeetcodeData:
 
         assert (await self._leetcode_data.paid("test")) is False
 
+    # pyre-fixme[56]: Pyre was not able to infer the type of the decorator
+    #  `pytest.mark.asyncio`.
     @pytest.mark.asyncio
     @mock.patch(
         "leetcode_anki.helpers.leetcode.LeetcodeData._get_problems_data",
@@ -215,6 +235,8 @@ class TestLeetcodeData:
 
         assert (await self._leetcode_data.problem_id("test")) == "1"
 
+    # pyre-fixme[56]: Pyre was not able to infer the type of the decorator
+    #  `pytest.mark.asyncio`.
     @pytest.mark.asyncio
     @mock.patch(
         "leetcode_anki.helpers.leetcode.LeetcodeData._get_problems_data",
@@ -225,6 +247,8 @@ class TestLeetcodeData:
 
         assert (await self._leetcode_data.likes("test")) == 1
 
+    # pyre-fixme[56]: Pyre was not able to infer the type of the decorator
+    #  `pytest.mark.asyncio`.
     @pytest.mark.asyncio
     @mock.patch(
         "leetcode_anki.helpers.leetcode.LeetcodeData._get_problems_data",
@@ -235,6 +259,8 @@ class TestLeetcodeData:
 
         assert (await self._leetcode_data.dislikes("test")) == 1
 
+    # pyre-fixme[56]: Pyre was not able to infer the type of the decorator
+    #  `pytest.mark.asyncio`.
     @pytest.mark.asyncio
     @mock.patch(
         "leetcode_anki.helpers.leetcode.LeetcodeData._get_problems_data",
@@ -248,6 +274,8 @@ class TestLeetcodeData:
             "difficulty-hard-tag",
         ]
 
+    # pyre-fixme[56]: Pyre was not able to infer the type of the decorator
+    #  `pytest.mark.asyncio`.
     @pytest.mark.asyncio
     @mock.patch(
         "leetcode_anki.helpers.leetcode.LeetcodeData._get_problems_data",
@@ -258,6 +286,8 @@ class TestLeetcodeData:
 
         assert (await self._leetcode_data.freq_bar("test")) == 1.1
 
+    # pyre-fixme[56]: Pyre was not able to infer the type of the decorator
+    #  `pytest.mark.asyncio`.
     @pytest.mark.asyncio
     @mock.patch(
         "leetcode_anki.helpers.leetcode.LeetcodeData._get_problems_data",
@@ -267,6 +297,8 @@ class TestLeetcodeData:
         assert self._leetcode_data._cache["test"] == QUESTION_DETAIL
 
     @mock.patch("time.sleep", mock.Mock())
+    # pyre-fixme[56]: Pyre was not able to infer the type of the decorator
+    #  `pytest.mark.asyncio`.
     @pytest.mark.asyncio
     async def test_get_problems_data_page(self) -> None:
         data = leetcode.models.graphql_data.GraphqlData(
@@ -281,14 +313,20 @@ class TestLeetcodeData:
             QUESTION_DETAIL
         ]
 
+    # pyre-fixme[56]: Pyre was not able to infer the type of the decorator
+    #  `pytest.mark.asyncio`.
     @pytest.mark.asyncio
     @mock.patch(
         "leetcode_anki.helpers.leetcode.LeetcodeData._get_problems_count",
         mock.Mock(return_value=234),
     )
     @mock.patch("leetcode_anki.helpers.leetcode.LeetcodeData._get_problems_data_page")
-    async def test_get_problems_data(self, mock_get_problems_data_page) -> None:
-        question_list = [QUESTION_DETAIL] * 234
+    async def test_get_problems_data(
+        self, mock_get_problems_data_page: mock.Mock
+    ) -> None:
+        question_list: List[
+            leetcode.models.graphql_question_detail.GraphqlQuestionDetail
+        ] = [QUESTION_DETAIL] * 234
 
         def dummy(
             offset: int, page_size: int, page: int

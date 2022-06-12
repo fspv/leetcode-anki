@@ -16,7 +16,7 @@ jobs:
       - name: Install pylint
         run: pip install pylint
       - name: Run pylint
-        run: pylint -E generate.py
+        run: find . -type f -name "*.py" | xargs pylint
   black:
     name: black
     runs-on: ubuntu-latest
@@ -46,4 +46,4 @@ jobs:
       - name: Install isort
         run: pip install isort
       - name: Run isort
-        run: isort --ensure-newline-before-comments --diff generate.py
+        run: isort --ensure-newline-before-comments --diff -v .

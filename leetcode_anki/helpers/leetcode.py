@@ -1,3 +1,4 @@
+# pylint: disable=missing-module-docstring
 import functools
 import json
 import logging
@@ -230,7 +231,7 @@ class LeetcodeData:
             leetcode.models.graphql_question_detail.GraphqlQuestionDetail
         ] = []
 
-        logging.info(f"Fetching {stop - start + 1} problems {page_size} per page")
+        logging.info("Fetching %s problems %s per page", stop - start + 1, page_size)
 
         for page in tqdm(
             range(math.ceil((stop - start + 1) / page_size)),
@@ -260,6 +261,8 @@ class LeetcodeData:
         cache = self._cache
         if problem_slug in cache:
             return cache[problem_slug]
+
+        raise ValueError(f"Problem {problem_slug} is not in cache")
 
     async def _get_description(self, problem_slug: str) -> str:
         """

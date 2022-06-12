@@ -1,6 +1,6 @@
 ---
 name: Build Anki deck
-on: push
+on: [push, pull_request]
 jobs:
   build-anki-deck:
     name: Build Anki deck

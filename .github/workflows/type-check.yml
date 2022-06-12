@@ -1,6 +1,6 @@
 ---
 name: Typing
-on: push
+on: [push, pull_request]
 jobs:
   mypy:
     name: mypy

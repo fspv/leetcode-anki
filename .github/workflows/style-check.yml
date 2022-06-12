@@ -1,6 +1,6 @@
 ---
 name: Style
-on: push
+on: [push, pull_request]
 jobs:
   pylint:
     name: pylint
@@ -31,7 +31,7 @@ jobs:
       - name: Install black
         run: pip install black
       - name: Run black
-        run: black --diff .
+        run: black --check .
   isort:
     name: isort
     runs-on: ubuntu-latest

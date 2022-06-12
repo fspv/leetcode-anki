@@ -3,3 +3,7 @@ asyncio_mode = "strict"
 testpaths = [
     "test",
 ]
+
+[tool.pylint]
+max-line-length = 88
+disable = ["line-too-long"]

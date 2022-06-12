@@ -33,19 +33,38 @@ cd leetcode-anki
 ```
 
 After that initialize and activate python virtualenv somewhere
+
+Linux/MacOS
 ```
 virtualenv -p python leetcode-anki
 . leetcode-anki/bin/activate
 ```
 
+Windows
+```
+python -m venv leetcode-anki
+.\leetcode-anki\Scripts\activate.bat
+```
+
 Then initialize session id variable. You can get it directly from your browser (if you're using chrome, cookies can be found here chrome://settings/cookies/detail?site=leetcode.com)
+
+Linux/Macos
 ```
 export LEETCODE_SESSION_ID="yyy"
 ```
 
-And finally run
+Windows
+```
+set LEETCODE_SESSION_ID="yyy"
+```
+
+And finally run for Linux/MacOS
 ```
 make generate
+```
+Or for Windows
+```
+python generate.py
 ```
 
 You'll get `leetcode.apkg` file, which you can import directly to your anki app.

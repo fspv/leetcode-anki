@@ -31,7 +31,7 @@ jobs:
       - name: Install black
         run: pip install black
       - name: Run black
-        run: black --check .
+        run: black --check --diff .
   isort:
     name: isort
     runs-on: ubuntu-latest

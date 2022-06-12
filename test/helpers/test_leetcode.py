@@ -245,7 +245,10 @@ class TestLeetcodeData:
     async def test_tags(self) -> None:
         self._leetcode_data._cache["test"] = QUESTION_DETAIL
 
-        assert (await self._leetcode_data.tags("test")) == ["test-tag"]
+        assert (await self._leetcode_data.tags("test")) == [
+            "test-tag",
+            "difficulty-hard-tag",
+        ]
 
     @pytest.mark.asyncio
     @mock.patch(

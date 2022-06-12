@@ -83,7 +83,9 @@ class LeetcodeData:
     names.
     """
 
-    def __init__(self, start: int, stop: int, page_size: int = 1000, list_id: str = "") -> None:
+    def __init__(
+        self, start: int, stop: int, page_size: int = 1000, list_id: str = ""
+    ) -> None:
         """
         Initialize leetcode API and disk cache for API responses
         """
@@ -354,7 +356,7 @@ class LeetcodeData:
         """
         data = self._get_problem_data(problem_slug)
         tags = list(map(lambda x: x.slug, data.topic_tags))
-        tags.append(data.difficulty)
+        tags.append(f"difficulty-{data.difficulty.lower()}-tag")
         return tags
 
     async def freq_bar(self, problem_slug: str) -> float:

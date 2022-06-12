@@ -353,7 +353,9 @@ class LeetcodeData:
         List of the tags for this problem (string slugs)
         """
         data = self._get_problem_data(problem_slug)
-        return list(map(lambda x: x.slug, data.topic_tags))
+        tags = list(map(lambda x: x.slug, data.topic_tags))
+        tags.append(data.difficulty)
+        return tags
 
     async def freq_bar(self, problem_slug: str) -> float:
         """

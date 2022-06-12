@@ -34,7 +34,7 @@ def parse_args() -> argparse.Namespace:
         "--start", type=int, help="Start generation from this problem", default=0
     )
     parser.add_argument(
-        "--stop", type=int, help="Stop generation on this problem", default=2**64
+        "--stop", type=int, help="Stop generation on this problem", default=2 ** 64
     )
     parser.add_argument(
         "--page-size",
@@ -49,10 +49,7 @@ def parse_args() -> argparse.Namespace:
         default="",
     )
     parser.add_argument(
-        "--output-file",
-        type=str,
-        help="Output filename",
-        default=OUTPUT_FILE,
+        "--output-file", type=str, help="Output filename", default=OUTPUT_FILE
     )
 
     args = parser.parse_args()
@@ -173,7 +170,7 @@ async def generate(
                 </a>
                 <br/>
                 """,
-            },
+            }
         ],
     )
     leetcode_deck = genanki.Deck(LEETCODE_ANKI_DECK_ID, Path(output_file).stem)
@@ -189,11 +186,7 @@ async def generate(
     logging.info("Generating flashcards")
     for leetcode_task_handle in task_handles:
         note_generators.append(
-            generate_anki_note(
-                leetcode_data,
-                leetcode_model,
-                leetcode_task_handle,
-            )
+            generate_anki_note(leetcode_data, leetcode_model, leetcode_task_handle)
         )
 
     for leetcode_note in tqdm(note_generators, unit="flashcard"):

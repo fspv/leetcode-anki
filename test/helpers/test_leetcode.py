@@ -36,7 +36,7 @@ QUESTION_DETAIL = leetcode.models.graphql_question_detail.GraphqlQuestionDetail(
             username="testcontributor",
             profile_url="test://profile/url",
             avatar_url="test://avatar/url",
-        ),
+        )
     ],
     lang_to_valid_playground="{}",
     topic_tags=[
@@ -53,10 +53,8 @@ QUESTION_DETAIL = leetcode.models.graphql_question_detail.GraphqlQuestionDetail(
     hints=["test hint 1", "test hint 2"],
     solution=[
         leetcode.models.graphql_question_solution.GraphqlQuestionSolution(
-            id=1,
-            can_see_detail=False,
-            typename="test type name",
-        ),
+            id=1, can_see_detail=False, typename="test type name"
+        )
     ],
     status="ac",
     sample_test_case="test case",
@@ -273,17 +271,14 @@ class TestLeetcodeData:
     async def test_get_problems_data_page(self) -> None:
         data = leetcode.models.graphql_data.GraphqlData(
             problemset_question_list=leetcode.models.graphql_problemset_question_list.GraphqlProblemsetQuestionList(
-                questions=[
-                    QUESTION_DETAIL,
-                ],
-                total_num=1,
+                questions=[QUESTION_DETAIL], total_num=1
             )
         )
         response = leetcode.models.graphql_response.GraphqlResponse(data=data)
         self._leetcode_data._api_instance.graphql_post.return_value = response
 
         assert self._leetcode_data._get_problems_data_page(0, 10, 0) == [
-            QUESTION_DETAIL,
+            QUESTION_DETAIL
         ]
 
     @pytest.mark.asyncio

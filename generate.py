@@ -34,7 +34,7 @@ def parse_args() -> argparse.Namespace:
         "--start", type=int, help="Start generation from this problem", default=0
     )
     parser.add_argument(
-        "--stop", type=int, help="Stop generation on this problem", default=2 ** 64
+        "--stop", type=int, help="Stop generation on this problem", default=2**64
     )
     parser.add_argument(
         "--page-size",

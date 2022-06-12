@@ -8,7 +8,7 @@ import argparse
 import asyncio
 import logging
 from pathlib import Path
-from typing import Any, Coroutine, List
+from typing import Any, Awaitable, Callable, Coroutine, List
 
 # https://github.com/kerrickstaley/genanki
 import genanki  # type: ignore
@@ -64,7 +64,7 @@ class LeetcodeNote(genanki.Note):
     """
 
     @property
-    def guid(self):
+    def guid(self) -> str:
         # Hash by leetcode task handle
         return genanki.guid_for(self.fields[0])
 
@@ -179,7 +179,7 @@ async def generate(
         start, stop, page_size, list_id
     )
 
-    note_generators: List[Coroutine[Any, Any, LeetcodeNote]] = []
+    note_generators: List[Awaitable[LeetcodeNote]] = []
 
     task_handles = await leetcode_data.all_problems_handles()
 
@@ -212,5 +212,5 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
+    loop: asyncio.events.AbstractEventLoop = asyncio.get_event_loop()
     loop.run_until_complete(main())

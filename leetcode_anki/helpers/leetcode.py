@@ -6,7 +6,7 @@ import math
 import os
 import time
 from functools import cached_property
-from typing import Callable, Dict, List, Tuple, Type
+from typing import Any, Callable, Dict, List, Tuple, Type, TypeVar
 
 # https://github.com/prius/python-leetcode
 import leetcode.api.default_api  # type: ignore
@@ -49,16 +49,28 @@ def _get_leetcode_api_client() -> leetcode.api.default_api.DefaultApi:
     return api_instance
 
 
-def retry(times: int, exceptions: Tuple[Type[Exception]], delay: float) -> Callable:
-    """
-    Retry Decorator
-    Retries the wrapped function/method `times` times if the exceptions listed
-    in `exceptions` are thrown
-    """
+_T = TypeVar("_T")
 
-    def decorator(func):
+
+class _RetryDecorator:
+    _times: int
+    _exceptions: Tuple[Type[Exception]]
+    _delay: float
+
+    def __init__(
+        self, times: int, exceptions: Tuple[Type[Exception]], delay: float
+    ) -> None:
+        self._times = times
+        self._exceptions = exceptions
+        self._delay = delay
+
+    def __call__(self, func: Callable[..., _T]) -> Callable[..., _T]:
+        times: int = self._times
+        exceptions: Tuple[Type[Exception]] = self._exceptions
+        delay: float = self._delay
+
         @functools.wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> _T:
             for attempt in range(times - 1):
                 try:
                     return func(*args, **kwargs)
@@ -73,7 +85,17 @@ def retry(times: int, exceptions: Tuple[Type[Exception]], delay: float) -> Calla
 
         return wrapper
 
-    return decorator
+
+def retry(
+    times: int, exceptions: Tuple[Type[Exception]], delay: float
+) -> _RetryDecorator:
+    """
+    Retry Decorator
+    Retries the wrapped function/method `times` times if the exceptions listed
+    in `exceptions` are thrown
+    """
+
+    return _RetryDecorator(times, exceptions, delay)
 
 
 class LeetcodeData:

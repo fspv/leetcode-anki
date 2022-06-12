@@ -1,3 +1,4 @@
+# pylint: disable=missing-module-docstring
 import functools
 import json
 import logging
@@ -5,7 +6,7 @@ import math
 import os
 import time
 from functools import cached_property
-from typing import Callable, Dict, List, Tuple, Type
+from typing import Any, Callable, Dict, List, Tuple, Type, TypeVar
 
 # https://github.com/prius/python-leetcode
 import leetcode.api.default_api  # type: ignore
@@ -48,16 +49,28 @@ def _get_leetcode_api_client() -> leetcode.api.default_api.DefaultApi:
     return api_instance
 
 
-def retry(times: int, exceptions: Tuple[Type[Exception]], delay: float) -> Callable:
-    """
-    Retry Decorator
-    Retries the wrapped function/method `times` times if the exceptions listed
-    in `exceptions` are thrown
-    """
+_T = TypeVar("_T")
 
-    def decorator(func):
+
+class _RetryDecorator:
+    _times: int
+    _exceptions: Tuple[Type[Exception]]
+    _delay: float
+
+    def __init__(
+        self, times: int, exceptions: Tuple[Type[Exception]], delay: float
+    ) -> None:
+        self._times = times
+        self._exceptions = exceptions
+        self._delay = delay
+
+    def __call__(self, func: Callable[..., _T]) -> Callable[..., _T]:
+        times: int = self._times
+        exceptions: Tuple[Type[Exception]] = self._exceptions
+        delay: float = self._delay
+
         @functools.wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> _T:
             for attempt in range(times - 1):
                 try:
                     return func(*args, **kwargs)
@@ -72,7 +85,17 @@ def retry(times: int, exceptions: Tuple[Type[Exception]], delay: float) -> Calla
 
         return wrapper
 
-    return decorator
+
+def retry(
+    times: int, exceptions: Tuple[Type[Exception]], delay: float
+) -> _RetryDecorator:
+    """
+    Retry Decorator
+    Retries the wrapped function/method `times` times if the exceptions listed
+    in `exceptions` are thrown
+    """
+
+    return _RetryDecorator(times, exceptions, delay)
 
 
 class LeetcodeData:
@@ -230,7 +253,7 @@ class LeetcodeData:
             leetcode.models.graphql_question_detail.GraphqlQuestionDetail
         ] = []
 
-        logging.info(f"Fetching {stop - start + 1} problems {page_size} per page")
+        logging.info("Fetching %s problems %s per page", stop - start + 1, page_size)
 
         for page in tqdm(
             range(math.ceil((stop - start + 1) / page_size)),
@@ -260,6 +283,8 @@ class LeetcodeData:
         cache = self._cache
         if problem_slug in cache:
             return cache[problem_slug]
+
+        raise ValueError(f"Problem {problem_slug} is not in cache")
 
     async def _get_description(self, problem_slug: str) -> str:
         """

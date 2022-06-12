@@ -7,6 +7,7 @@ known.
 import argparse
 import asyncio
 import logging
+from pathlib import Path
 from typing import Any, Coroutine, List
 
 # https://github.com/kerrickstaley/genanki
@@ -40,6 +41,12 @@ def parse_args() -> argparse.Namespace:
         type=int,
         help="Get at most this many problems (decrease if leetcode API times out)",
         default=1000,
+    )
+    parser.add_argument(
+        "--output-file",
+        type=str,
+        help="Output filename",
+        default=OUTPUT_FILE,
     )
 
     args = parser.parse_args()
@@ -96,7 +103,7 @@ async def generate_anki_note(
     )
 
 
-async def generate(start: int, stop: int, page_size: int) -> None:
+async def generate(start: int, stop: int, page_size: int, output_file: str) -> None:
     """
     Generate an Anki deck
     """
@@ -161,7 +168,7 @@ async def generate(start: int, stop: int, page_size: int) -> None:
             },
         ],
     )
-    leetcode_deck = genanki.Deck(LEETCODE_ANKI_DECK_ID, "leetcode")
+    leetcode_deck = genanki.Deck(LEETCODE_ANKI_DECK_ID, Path(output_file).stem)
 
     leetcode_data = leetcode_anki.helpers.leetcode.LeetcodeData(start, stop, page_size)
 
@@ -182,7 +189,7 @@ async def generate(start: int, stop: int, page_size: int) -> None:
     for leetcode_note in tqdm(note_generators, unit="flashcard"):
         leetcode_deck.add_note(await leetcode_note)
 
-    genanki.Package(leetcode_deck).write_to_file(OUTPUT_FILE)
+    genanki.Package(leetcode_deck).write_to_file(output_file)
 
 
 async def main() -> None:
@@ -191,8 +198,8 @@ async def main() -> None:
     """
     args = parse_args()
 
-    start, stop, page_size = args.start, args.stop, args.page_size
-    await generate(start, stop, page_size)
+    start, stop, page_size, output_file = args.start, args.stop, args.page_size, args.output_file
+    await generate(start, stop, page_size, output_file)
 
 
 if __name__ == "__main__":

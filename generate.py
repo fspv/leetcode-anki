@@ -43,6 +43,12 @@ def parse_args() -> argparse.Namespace:
         default=1000,
     )
     parser.add_argument(
+        "--list-id",
+        type=str,
+        help="Get all questions from a specific list id (https://leetcode.com/list?selectedList=<list_id>",
+        default="",
+    )
+    parser.add_argument(
         "--output-file",
         type=str,
         help="Output filename",
@@ -103,7 +109,7 @@ async def generate_anki_note(
     )
 
 
-async def generate(start: int, stop: int, page_size: int, output_file: str) -> None:
+async def generate(start: int, stop: int, page_size: int, list_id: str, output_file: str) -> None:
     """
     Generate an Anki deck
     """
@@ -170,7 +176,7 @@ async def generate(start: int, stop: int, page_size: int, output_file: str) -> N
     )
     leetcode_deck = genanki.Deck(LEETCODE_ANKI_DECK_ID, Path(output_file).stem)
 
-    leetcode_data = leetcode_anki.helpers.leetcode.LeetcodeData(start, stop, page_size)
+    leetcode_data = leetcode_anki.helpers.leetcode.LeetcodeData(start, stop, page_size, list_id)
 
     note_generators: List[Coroutine[Any, Any, LeetcodeNote]] = []
 
@@ -198,8 +204,8 @@ async def main() -> None:
     """
     args = parse_args()
 
-    start, stop, page_size, output_file = args.start, args.stop, args.page_size, args.output_file
-    await generate(start, stop, page_size, output_file)
+    start, stop, page_size, list_id, output_file = args.start, args.stop, args.page_size, args.list_id, args.output_file
+    await generate(start, stop, page_size, list_id, output_file)
 
 
 if __name__ == "__main__":

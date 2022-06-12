@@ -83,7 +83,7 @@ class LeetcodeData:
     names.
     """
 
-    def __init__(self, start: int, stop: int, page_size: int = 1000) -> None:
+    def __init__(self, start: int, stop: int, page_size: int = 1000, list_id: str = "") -> None:
         """
         Initialize leetcode API and disk cache for API responses
         """
@@ -102,6 +102,7 @@ class LeetcodeData:
         self._start = start
         self._stop = stop
         self._page_size = page_size
+        self._list_id = list_id
 
     @cached_property
     def _api_instance(self) -> leetcode.api.default_api.DefaultApi:
@@ -140,6 +141,7 @@ class LeetcodeData:
                 skip=0,
                 filters=leetcode.models.graphql_query_problemset_question_list_variables_filter_input.GraphqlQueryProblemsetQuestionListVariablesFilterInput(
                     tags=[],
+                    list_id=self._list_id
                     # difficulty="MEDIUM",
                     # status="NOT_STARTED",
                     # list_id="7p5x763",  # Top Amazon Questions
@@ -193,7 +195,9 @@ class LeetcodeData:
                 category_slug="",
                 limit=page_size,
                 skip=offset + page * page_size,
-                filters=leetcode.models.graphql_query_problemset_question_list_variables_filter_input.GraphqlQueryProblemsetQuestionListVariablesFilterInput(),
+                filters=leetcode.models.graphql_query_problemset_question_list_variables_filter_input.GraphqlQueryProblemsetQuestionListVariablesFilterInput(
+                    list_id=self._list_id
+                ),
             ),
             operation_name="problemsetQuestionList",
         )

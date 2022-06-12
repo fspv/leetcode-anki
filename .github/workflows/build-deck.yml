@@ -13,6 +13,8 @@ jobs:
           python-version: 3.9
       - name: Install requirements
         run: pip install -r requirements.txt
+      - name: Install sqlite
+        run: sudo apt-get install sqlite3 unzip
       - name: Get current date
         id: date
         run: echo "::set-output name=date::$(date +'%Y-%m-%d_%H:%M:%S')"
@@ -20,7 +22,25 @@ jobs:
         id: timestamp
         run: echo "::set-output name=timestamp::$(date +'%s')"
       - name: Test build Anki Deck
-        run: python generate.py --stop 3
+        run: >
+          git clean -f -x -d
+          && python generate.py --start 1 --stop 5 --page-size 2
+          && unzip leetcode.apkg
+          && sqlite3 collection.anki2 .schema
+          && sqlite3 collection.anki2 .dump
+        env:
+          LEETCODE_SESSION_ID: ${{ secrets.LEETCODE_SESSION_ID }}
+      - name: Test build Anki Deck (non-default output file)
+        run: >
+          git clean -f -x -d
+          && python generate.py --stop 3 --output-file test.apkg
+          && unzip test.apkg
+          && sqlite3 collection.anki2 .schema
+          && sqlite3 collection.anki2 .dump
+        env:
+          LEETCODE_SESSION_ID: ${{ secrets.LEETCODE_SESSION_ID }}
+      - name: Test build Anki Deck with Amazon list id
+        run: python generate.py --stop 10 --list-id 7p5x763
         env:
           LEETCODE_SESSION_ID: ${{ secrets.LEETCODE_SESSION_ID }}
       - name: Build Anki Deck

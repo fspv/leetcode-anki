@@ -397,7 +397,7 @@ class LeetcodeData:
     async def all_problems_handles(self) -> List[str]:
         """
         Get all problem handles known.
-        This method is used to initiate fetching of all data needed via blocking call.
+        This method is used to initiate fetching of all data needed from Leetcode, and via blocking call.
 
         Example: ["two-sum", "three-sum"]
         """

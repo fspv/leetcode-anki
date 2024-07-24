@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
 """
-This script generates an Anki deck with all the leetcode problems currently
-known.
+This script generates an Anki deck
+- with all the leetcode problems currently known.
+    - optionally, with all the leetcode problems that currently have expected status, e.g. submission accepted.
+- with the last accepted submission for each problem on back side.
+
+To work with leetcode API, you need to provide the session id and csrf token (you could find them manually in the browser).
 """
 
 import argparse
 import asyncio
 import logging
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Coroutine, List
+from typing import Awaitable, List
+import html
 
 # https://github.com/kerrickstaley/genanki
 import genanki  # type: ignore
@@ -51,6 +56,19 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output-file", type=str, help="Output filename", default=OUTPUT_FILE
     )
+    parser.add_argument(
+        "--problem-status",
+        type=str,
+        help="Get all problems with specific status {'AC', etc.}",
+        default="",
+    )
+    parser.add_argument(
+        "--include-last-submission",
+        type=bool,
+        help="Get the last accepted submission for each problem. "
+             "Note, that this is very heavy operation as it adds 2 additional requests per problem.",
+        default=False,
+    )
 
     args = parser.parse_args()
 
@@ -69,6 +87,7 @@ class LeetcodeNote(genanki.Note):
         return genanki.guid_for(self.fields[0])
 
 
+# TODO: refactor to separate module.
 async def generate_anki_note(
     leetcode_data: leetcode_anki.helpers.leetcode.LeetcodeData,
     leetcode_model: genanki.Model,
@@ -99,15 +118,18 @@ async def generate_anki_note(
                 )
             ),
             str(await leetcode_data.freq_bar(leetcode_task_handle)),
+            # Use escape to avoid HTML injection.
+            ("\n" + html.escape(str(await leetcode_data.last_submission_code(leetcode_task_handle)))
+             if leetcode_data.include_last_submission else ""),
         ],
         tags=await leetcode_data.tags(leetcode_task_handle),
-        # FIXME: sort field doesn't work doesn't work
+        # FIXME: sort field doesn't work doesn't work (always remember I am patient, I am patient).
         sort_field=str(await leetcode_data.freq_bar(leetcode_task_handle)).zfill(3),
     )
 
 
 async def generate(
-    start: int, stop: int, page_size: int, list_id: str, output_file: str
+    start: int, stop: int, page_size: int, list_id: str, output_file: str, problem_status: str, include_last_submission: bool
 ) -> None:
     """
     Generate an Anki deck
@@ -129,6 +151,7 @@ async def generate(
             {"name": "SubmissionsAccepted"},
             {"name": "SumissionAcceptRate"},
             {"name": "Frequency"},
+            {"name": "LastSubmissionCode"},
             # TODO: add hints
         ],
         templates=[
@@ -168,7 +191,16 @@ async def generate(
                 <a href='https://leetcode.com/problems/{{Slug}}/solution/'>
                     https://leetcode.com/problems/{{Slug}}/solution/
                 </a>
-                <br/>
+                {{#LastSubmissionCode}}
+                    <br/>
+                    <b>Accepted Last Submission:</b>
+                    <pre>
+                    <code>
+                    {{LastSubmissionCode}}
+                    </code>
+                    </pre>
+                    <br/>
+                {{/LastSubmissionCode}}
                 """,
             }
         ],
@@ -176,11 +208,12 @@ async def generate(
     leetcode_deck = genanki.Deck(LEETCODE_ANKI_DECK_ID, Path(output_file).stem)
 
     leetcode_data = leetcode_anki.helpers.leetcode.LeetcodeData(
-        start, stop, page_size, list_id
+        start, stop, page_size, list_id, problem_status, include_last_submission
     )
 
     note_generators: List[Awaitable[LeetcodeNote]] = []
 
+    # Fetch all data from Leetcode API.
     task_handles = await leetcode_data.all_problems_handles()
 
     logging.info("Generating flashcards")
@@ -201,14 +234,16 @@ async def main() -> None:
     """
     args = parse_args()
 
-    start, stop, page_size, list_id, output_file = (
+    start, stop, page_size, list_id, output_file, problem_status, include_last_submission = (
         args.start,
         args.stop,
         args.page_size,
         args.list_id,
         args.output_file,
+        args.problem_status,
+        args.include_last_submission,
     )
-    await generate(start, stop, page_size, list_id, output_file)
+    await generate(start, stop, page_size, list_id, output_file, problem_status, include_last_submission)
 
 
 if __name__ == "__main__":

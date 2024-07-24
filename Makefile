@@ -10,7 +10,7 @@ generate: base ## Generate cards without user submission but for all problems av
 	@echo "\033[0;32mSuccess! Now you can import leetcode.apkg to Anki.\033[0m"
 
 generate-with-last-submissions: base ## Generate cards with user last submissions for only solved problems
-	python3 generate.py --problem-status AC --include-last-submission True --stop 1
+	python3 generate.py --problem-status AC --include-last-submission True
 	@echo "\033[0;32mSuccess! Now you can import leetcode.apkg to Anki.\033[0m"
 
 help: ## List makefile targets

@@ -303,7 +303,7 @@ class LeetcodeData:
                 data = self.get_submission_code(problem_slug)
             except Exception as e:
                 # Log only if submission was expected to be found.
-                if self.status:
+                if self.status and self.include_last_submission:
                     logging.error("Error fetching submission for problem: %s", problem_slug)
                     logging.exception(e)
                 data = ""

@@ -50,6 +50,11 @@ Then initialize session id variable. You can get it directly from your browser (
 
 > Note, since 24.07.24 you need to manually set CSRF token as well. You can find it in the same place as session id.
 
+<details>
+  <summary>Chrome example cookie</summary>
+    <img src="https://github.com/AlcibiadesCleinias/dokies-public/blob/main/leetcode-anki.png?raw=true" height="300">
+</details>
+
 Linux/Macos
 ```
 export LEETCODE_SESSION_ID="yyy"
@@ -76,6 +81,11 @@ python generate.py
 ```
 
 ### Including your Last Submission Code
+<details>
+  <summary>Example if code on the back card part</summary>
+    <img src="https://github.com/AlcibiadesCleinias/dokies-public/blob/main/leetcode-anki-1.png?raw=true" height="300">
+</details>
+
 Run for Linux/MacOS
 ```
 make generate-with-last-submissions

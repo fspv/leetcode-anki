@@ -3,3 +3,4 @@ leetcode.apkg
 .mypy_cache
 .cookies.sh
 __pycache__
+.idea/

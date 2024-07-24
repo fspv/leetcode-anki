@@ -48,17 +48,29 @@ python -m venv leetcode-anki
 
 Then initialize session id variable. You can get it directly from your browser (if you're using chrome, cookies can be found here chrome://settings/cookies/detail?site=leetcode.com)
 
+> Note, since 24.07.24 you need to manually set CSRF token as well. You can find it in the same place as session id.
+
+<details>
+  <summary>Chrome example cookie</summary>
+    <img src="https://github.com/AlcibiadesCleinias/dokies-public/blob/main/leetcode-anki.png?raw=true" height="300">
+</details>
+
 Linux/Macos
 ```
 export LEETCODE_SESSION_ID="yyy"
+export LEETCODE_CSRF_TOKEN="zzz"
 ```
 
 Windows
 ```
 set LEETCODE_SESSION_ID="yyy"
+set LEETCODE_CSRF_TOKEN="zzz"
 ```
 
-And finally run for Linux/MacOS
+Then you can run the script
+
+### Classic Lightweight Cards
+Run for Linux/MacOS
 ```
 make generate
 ```
@@ -66,6 +78,22 @@ Or for Windows
 ```
 pip install -r requirements.txt
 python generate.py
+```
+
+### Including your Last Submission Code
+<details>
+  <summary>Example if code on the back card part</summary>
+    <img src="https://github.com/AlcibiadesCleinias/dokies-public/blob/main/leetcode-anki-1.png?raw=true" height="300">
+</details>
+
+Run for Linux/MacOS
+```
+make generate-with-last-submissions
+```
+Or for Windows
+```
+pip install -r requirements.txt
+python generate.py --problem-status AC --include-last-submission True
 ```
 
 You'll get `leetcode.apkg` file, which you can import directly to your anki app.

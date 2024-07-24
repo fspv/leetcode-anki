@@ -35,7 +35,11 @@ def _get_leetcode_api_client() -> leetcode.api.default_api.DefaultApi:
     configuration = leetcode.configuration.Configuration()
 
     session_id = os.environ["LEETCODE_SESSION_ID"]
-    csrf_token = leetcode.auth.get_csrf_cookie(session_id)
+    csrf_token = os.environ.get("LEETCODE_CSRF_TOKEN", None)
+    # Probably method is deprecated since ~24.07.2024,
+    #  ref to https://github.com/fspv/leetcode-anki/issues/39.
+    # TODO: check new versions for smooth integration of csrf_cookie.
+    csrf_token = leetcode.auth.get_csrf_cookie(session_id) if csrf_token is None else csrf_token
 
     configuration.api_key["x-csrftoken"] = csrf_token
     configuration.api_key["csrftoken"] = csrf_token
@@ -58,7 +62,7 @@ class _RetryDecorator:
     _delay: float
 
     def __init__(
-        self, times: int, exceptions: Tuple[Type[Exception]], delay: float
+            self, times: int, exceptions: Tuple[Type[Exception]], delay: float
     ) -> None:
         self._times = times
         self._exceptions = exceptions
@@ -87,7 +91,7 @@ class _RetryDecorator:
 
 
 def retry(
-    times: int, exceptions: Tuple[Type[Exception]], delay: float
+        times: int, exceptions: Tuple[Type[Exception]], delay: float
 ) -> _RetryDecorator:
     """
     Retry Decorator
@@ -105,12 +109,18 @@ class LeetcodeData:
     This data can be later accessed using provided methods with corresponding
     names.
     """
+    # Leetcode has a rate limiter.
+    LEETCODE_API_REQUEST_DELAY = 2
+    SUBMISSION_STATUS_ACCEPTED = 10
 
     def __init__(
-        self, start: int, stop: int, page_size: int = 1000, list_id: str = ""
+            self, start: int, stop: int, page_size: int = 1000, list_id: str = "", status: str = "", include_last_submission: bool = False
     ) -> None:
         """
         Initialize leetcode API and disk cache for API responses
+        @param status: if status is "AC" then only accepted solutions will be fetched.
+        @param include_last_submission: if True, then last accepted submission will be fetched for each problem.
+         Note, that this is very heavy operation as it add 2 additional requests per problem.
         """
         if start < 0:
             raise ValueError(f"Start must be non-negative: {start}")
@@ -128,6 +138,8 @@ class LeetcodeData:
         self._stop = stop
         self._page_size = page_size
         self._list_id = list_id
+        self.status = status if status != "" else None
+        self.include_last_submission = include_last_submission
 
     @cached_property
     def _api_instance(self) -> leetcode.api.default_api.DefaultApi:
@@ -135,13 +147,23 @@ class LeetcodeData:
 
     @cached_property
     def _cache(
-        self,
+            self,
     ) -> Dict[str, leetcode.models.graphql_question_detail.GraphqlQuestionDetail]:
         """
         Cached method to return dict (problem_slug -> question details)
         """
         problems = self._get_problems_data()
         return {problem.title_slug: problem for problem in problems}
+
+    @cached_property
+    def _cache_user_submissions(
+            self,
+    ) -> Dict[str, str]:
+        """
+        Cached method to return dict (problem_slug -> last submitted accepted user solution)
+        """
+        problem_to_submission = self._get_submissions_codes_data()
+        return {problem_slug: code_data for problem_slug, code_data in problem_to_submission.items()}
 
     @retry(times=3, exceptions=(urllib3.exceptions.ProtocolError,), delay=5)
     def _get_problems_count(self) -> int:
@@ -166,9 +188,9 @@ class LeetcodeData:
                 skip=0,
                 filters=leetcode.models.graphql_query_problemset_question_list_variables_filter_input.GraphqlQueryProblemsetQuestionListVariablesFilterInput(
                     tags=[],
-                    list_id=self._list_id
+                    list_id=self._list_id,
+                    status=self.status,
                     # difficulty="MEDIUM",
-                    # status="NOT_STARTED",
                     # list_id="7p5x763",  # Top Amazon Questions
                     # premium_only=False,
                 ),
@@ -176,14 +198,14 @@ class LeetcodeData:
             operation_name="problemsetQuestionList",
         )
 
-        time.sleep(2)  # Leetcode has a rate limiter
+        time.sleep(self.LEETCODE_API_REQUEST_DELAY)  # Leetcode has a rate limiter
         data = api_instance.graphql_post(body=graphql_request).data
 
         return data.problemset_question_list.total_num or 0
 
     @retry(times=3, exceptions=(urllib3.exceptions.ProtocolError,), delay=5)
     def _get_problems_data_page(
-        self, offset: int, page_size: int, page: int
+            self, offset: int, page_size: int, page: int
     ) -> List[leetcode.models.graphql_question_detail.GraphqlQuestionDetail]:
         api_instance = self._api_instance
         graphql_request = leetcode.models.graphql_query.GraphqlQuery(
@@ -221,13 +243,14 @@ class LeetcodeData:
                 limit=page_size,
                 skip=offset + page * page_size,
                 filters=leetcode.models.graphql_query_problemset_question_list_variables_filter_input.GraphqlQueryProblemsetQuestionListVariablesFilterInput(
-                    list_id=self._list_id
+                    list_id=self._list_id,
+                    status=self.status,
                 ),
             ),
             operation_name="problemsetQuestionList",
         )
 
-        time.sleep(2)  # Leetcode has a rate limiter
+        time.sleep(self.LEETCODE_API_REQUEST_DELAY)  # Leetcode has a rate limiter
         data = api_instance.graphql_post(
             body=graphql_request
         ).data.problemset_question_list.questions
@@ -235,7 +258,7 @@ class LeetcodeData:
         return data
 
     def _get_problems_data(
-        self,
+            self,
     ) -> List[leetcode.models.graphql_question_detail.GraphqlQuestionDetail]:
         problem_count = self._get_problems_count()
 
@@ -256,25 +279,139 @@ class LeetcodeData:
         logging.info("Fetching %s problems %s per page", stop - start + 1, page_size)
 
         for page in tqdm(
-            range(math.ceil((stop - start + 1) / page_size)),
-            unit="problem",
-            unit_scale=page_size,
+                range(math.ceil((stop - start + 1) / page_size)),
+                unit="problem",
+                unit_scale=page_size,
         ):
             data = self._get_problems_data_page(start, page_size, page)
             problems.extend(data)
 
         return problems
 
+    @retry(times=3, exceptions=(urllib3.exceptions.ProtocolError,), delay=5)
+    def _get_submissions_codes_data(self) -> Dict[str, str]:
+        """It collects all submissions for the cached problems of the current class object."""
+        all_fetched_problems = self._cache.keys()
+        problem_to_submission: Dict[str, str] = {}
+
+        for problem_slug in tqdm(
+                all_fetched_problems,
+                unit="Problem",
+        ):
+            logging.info("Fetching submission for problem: %s ", problem_slug)
+            try:
+                data = self.get_submission_code(problem_slug)
+            except Exception as e:
+                # Log only if submission was expected to be found.
+                if self.status and self.include_last_submission:
+                    logging.error("Error fetching submission for problem: %s", problem_slug)
+                    logging.exception(e)
+                data = ""
+            problem_to_submission[problem_slug] = data
+        return problem_to_submission
+
+    def get_submission_code(self, problem_slug: str) -> str:
+        """
+        [Experimental feature, 24.07.24] Get user (depends on session cookies) last submitted code 
+        that was accepted for the given problem.
+        
+        Note:
+        - it is sync request.
+        - it uses 2 raw requests under the hood to leetcode graphQL endpoints.
+        """
+        LIMIT = 500  # Max number of submissions to fetch.
+
+        data = self._api_instance.graphql_post(
+            body={
+                "query": """
+            query submissionList($offset: Int!, $limit: Int!, $lastKey: String, $questionSlug: String!, $lang: Int, $status: Int) {
+            questionSubmissionList(
+                offset: $offset
+                limit: $limit
+                lastKey: $lastKey
+                questionSlug: $questionSlug
+                lang: $lang
+                status: $status
+            ) {
+                lastKey
+                hasNext
+                submissions {
+                    id
+                }
+            }
+        }
+        """,
+                "variables": {
+                    "questionSlug": problem_slug,
+                    "offset": 0,
+                    "limit": LIMIT,
+                    "lastKey": None,
+                    "status": self.SUBMISSION_STATUS_ACCEPTED,
+                },
+                "operationName": "submissionList"
+            },
+            _preload_content=False,  # The key to make it works and return raw content.
+        )
+        # Reponse format: {'data': {'questionSubmissionList':
+        #  {'lastKey': None, 'hasNext': False, 'submissions': [{'id': '969483658', <...>}]}}}
+        payload = data.json()
+
+        # Check that somthing returnd and remember the first id.
+        accepted_submissions = payload.get("data", {}).get("questionSubmissionList", {}).get("submissions", {})
+        if not accepted_submissions:
+            raise Exception("No accepted submissions found")
+        first_submission_id = accepted_submissions[0]["id"]
+
+        time.sleep(self.LEETCODE_API_REQUEST_DELAY)
+
+        # Get Submission details (we want to get code part).
+        data = self._api_instance.graphql_post(
+            body={
+                "query": """
+        query submissionDetails($submissionId: Int!) {
+            submissionDetails(submissionId: $submissionId) {
+                code
+                lang {
+                    name
+                    verboseName
+                }
+            }
+        }
+        """,
+                "variables": {
+                    "submissionId": first_submission_id
+                },
+                "operationName": "submissionDetails"
+            },
+            _preload_content=False,  # The key to make it work and return raw content.
+        )
+        # E.g. repspons: { "data": { "submissionDetails": { <...> "code": "<...>", <...>} } }
+        payload = data.json()
+        # Get code if possible.
+        code = payload.get("data", {}).get("submissionDetails", {}).get("code", "")
+        if not code:
+            raise Exception("No code found")
+
+        return code
+
     async def all_problems_handles(self) -> List[str]:
         """
         Get all problem handles known.
+        This method is used to initiate fetching of all data needed from Leetcode, and via blocking call.
 
         Example: ["two-sum", "three-sum"]
         """
-        return list(self._cache.keys())
+        # Fetch problems if not yet fetched.
+        problem_slugs = list(self._cache.keys())
+
+        # Fetch submissions if not yet fetched and needed.
+        if self.include_last_submission:
+            _ = self._cache_user_submissions
+
+        return problem_slugs
 
     def _get_problem_data(
-        self, problem_slug: str
+            self, problem_slug: str
     ) -> leetcode.models.graphql_question_detail.GraphqlQuestionDetail:
         """
         TODO: Legacy method. Needed in the old architecture. Can be replaced
@@ -285,6 +422,12 @@ class LeetcodeData:
             return cache[problem_slug]
 
         raise ValueError(f"Problem {problem_slug} is not in cache")
+
+    async def last_submission_code(self, problem_slug: str) -> str:
+        """
+        Last accepted submission code.
+        """
+        return self._cache_user_submissions.get(problem_slug, "No code found.")
 
     async def _get_description(self, problem_slug: str) -> str:
         """

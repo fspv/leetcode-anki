@@ -75,6 +75,7 @@ def dummy_return_question_detail_dict(
 
 
 @mock.patch("os.environ", mock.MagicMock(return_value={"LEETCODE_SESSION_ID": "test"}))
+@mock.patch("os.environ", mock.MagicMock(return_value={"LEETCODE_CSRF_TOKEN": "test"}))
 @mock.patch("leetcode.auth", mock.MagicMock())
 class TestLeetcode:
     # pyre-fixme[56]: Pyre was not able to infer the type of the decorator
@@ -108,9 +109,9 @@ class TestLeetcodeData:
     _question_detail_singleton: Optional[
         leetcode.models.graphql_question_detail.GraphqlQuestionDetail
     ] = None
-    _leetcode_data_singleton: Optional[
-        leetcode_anki.helpers.leetcode.LeetcodeData
-    ] = None
+    _leetcode_data_singleton: Optional[leetcode_anki.helpers.leetcode.LeetcodeData] = (
+        None
+    )
 
     @property
     def _question_details(
@@ -132,7 +133,7 @@ class TestLeetcodeData:
 
         return leetcode_data
 
-    def setup(self) -> None:
+    def setup_method(self) -> None:
         self._question_detail_singleton = QUESTION_DETAIL
         self._leetcode_data_singleton = leetcode_anki.helpers.leetcode.LeetcodeData(
             0, 10000

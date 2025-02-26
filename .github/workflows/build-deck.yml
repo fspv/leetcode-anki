@@ -72,9 +72,3 @@ jobs:
           asset_path: ./leetcode.apkg
           asset_name: leetcode.apkg
           asset_content_type: application/octet-stream
-      - name: Publish release
-        uses: StuYarrow/publish-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          id: ${{ steps.create_release.outputs.id }}

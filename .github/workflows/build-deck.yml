@@ -30,6 +30,7 @@ jobs:
           && sqlite3 collection.anki2 .dump
         env:
           LEETCODE_SESSION_ID: ${{ secrets.LEETCODE_SESSION_ID }}
+          LEETCODE_CSRF_TOKEN: ${{ secrets.LEETCODE_CSRF_TOKEN }}
       - name: Test build Anki Deck (non-default output file)
         run: >
           git clean -f -x -d
@@ -39,15 +40,18 @@ jobs:
           && sqlite3 collection.anki2 .dump
         env:
           LEETCODE_SESSION_ID: ${{ secrets.LEETCODE_SESSION_ID }}
+          LEETCODE_CSRF_TOKEN: ${{ secrets.LEETCODE_CSRF_TOKEN }}
       - name: Test build Anki Deck with Amazon list id
         run: python generate.py --stop 10 --list-id 7p5x763
         env:
           LEETCODE_SESSION_ID: ${{ secrets.LEETCODE_SESSION_ID }}
+          LEETCODE_CSRF_TOKEN: ${{ secrets.LEETCODE_CSRF_TOKEN }}
       - name: Build Anki Deck
         run: python generate.py
         if: github.ref == 'refs/heads/master'
         env:
           LEETCODE_SESSION_ID: ${{ secrets.LEETCODE_SESSION_ID }}
+          LEETCODE_CSRF_TOKEN: ${{ secrets.LEETCODE_CSRF_TOKEN }}
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1

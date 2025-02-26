@@ -35,7 +35,7 @@ def _get_leetcode_api_client() -> leetcode.api.default_api.DefaultApi:
     configuration = leetcode.configuration.Configuration()
 
     session_id = os.environ["LEETCODE_SESSION_ID"]
-    csrf_token = leetcode.auth.get_csrf_cookie(session_id)
+    csrf_token = os.environ["LEETCODE_CSRF_TOKEN"]
 
     configuration.api_key["x-csrftoken"] = csrf_token
     configuration.api_key["csrftoken"] = csrf_token
@@ -166,7 +166,7 @@ class LeetcodeData:
                 skip=0,
                 filters=leetcode.models.graphql_query_problemset_question_list_variables_filter_input.GraphqlQueryProblemsetQuestionListVariablesFilterInput(
                     tags=[],
-                    list_id=self._list_id
+                    list_id=self._list_id,
                     # difficulty="MEDIUM",
                     # status="NOT_STARTED",
                     # list_id="7p5x763",  # Top Amazon Questions

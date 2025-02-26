@@ -27,7 +27,7 @@ I personally use it to track my grinding progress.
 
 ## How to run
 First download the source code
-```
+```sh
 git clone https://github.com/prius/leetcode-anki.git
 cd leetcode-anki
 ```
@@ -35,35 +35,37 @@ cd leetcode-anki
 After that initialize and activate python virtualenv somewhere
 
 Linux/MacOS
-```
+```sh
 virtualenv -p python leetcode-anki
 . leetcode-anki/bin/activate
 ```
 
 Windows
-```
+```sh
 python -m venv leetcode-anki
 .\leetcode-anki\Scripts\activate.bat
 ```
 
-Then initialize session id variable. You can get it directly from your browser (if you're using chrome, cookies can be found here chrome://settings/cookies/detail?site=leetcode.com)
+Then initialize necessary environment variables. You can get it directly from your browser cookies (`csrftoken` and `LEETCODE_SESSION`)
 
 Linux/Macos
-```
+```sh
+export LEETCODE_CSRF_TOKEN="xxx"
 export LEETCODE_SESSION_ID="yyy"
 ```
 
 Windows
-```
+```sh
+set LEETCODE_CSRF_TOKEN="xxx"
 set LEETCODE_SESSION_ID="yyy"
 ```
 
 And finally run for Linux/MacOS
-```
+```sh
 make generate
 ```
 Or for Windows
-```
+```sh
 pip install -r requirements.txt
 python generate.py
 ```

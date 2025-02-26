@@ -1,4 +1,4 @@
-python-leetcode==1.2.1
+python-leetcode==1.2.3
 setuptools==57.5.0
 genanki
 tqdm

@@ -6,21 +6,21 @@ jobs:
     name: Build Anki deck
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
-      - name: Set up Python 3.9
-        uses: actions/setup-python@v1
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
         with:
-          python-version: 3.9
+          python-version: "3.11"
       - name: Install requirements
         run: pip install -r requirements.txt
       - name: Install sqlite
         run: sudo apt-get install sqlite3 unzip
       - name: Get current date
         id: date
-        run: echo "::set-output name=date::$(date +'%Y-%m-%d_%H:%M:%S')"
+        run: echo "date=$(date +'%Y-%m-%d_%H:%M:%S')" >> "$GITHUB_OUTPUT"
       - name: Get current timestamp
         id: timestamp
-        run: echo "::set-output name=timestamp::$(date +'%s')"
+        run: echo "timestamp=$(date +'%s')" >> "$GITHUB_OUTPUT"
       - name: Test build Anki Deck
         run: >
           git clean -f -x -d
@@ -52,23 +52,15 @@ jobs:
         env:
           LEETCODE_SESSION_ID: ${{ secrets.LEETCODE_SESSION_ID }}
           LEETCODE_CSRF_TOKEN: ${{ secrets.LEETCODE_CSRF_TOKEN }}
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create Release and Upload Asset
+        uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/master'
         with:
-          tag_name: ${{ github.ref }}-${{ steps.timestamp.outputs.timestamp }}
-          release_name: >
+          tag_name: ${{ github.ref_name }}-${{ steps.timestamp.outputs.timestamp }}
+          name: >
             Anki Deck from ${{ github.ref }} on ${{ steps.date.outputs.date }}
           draft: true
           prerelease: true
-      - name: Upload release asset
-        uses: actions/upload-release-asset@v1
+          files: ./leetcode.apkg
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./leetcode.apkg
-          asset_name: leetcode.apkg
-          asset_content_type: application/octet-stream
